@@ -181,13 +181,19 @@ def get_data_loaders(batch_size=BATCH_SIZE, num_workers=0, train_csv=None, val_c
     val_dataset = ForgeryDataset(val_csv, apply_augmentation=False, image_size=image_size)
     test_dataset = ForgeryDataset(test_csv, apply_augmentation=False, image_size=image_size)
     
-    # Create data loaders
+    # Create data loaders with GPU optimization
+    # Optimize workers for GPU usage
+    if num_workers == 0:
+        num_workers = 8 if torch.cuda.is_available() else 4
+    
     train_loader = DataLoader(
         train_dataset, 
         batch_size=batch_size, 
         shuffle=True, 
         num_workers=num_workers,
-        pin_memory=torch.cuda.is_available()
+        pin_memory=pin_memory,
+        drop_last=True,  # For consistent batch sizes on GPU
+        persistent_workers=torch.cuda.is_available()  # Keep workers alive on GPU
     )
     
     val_loader = DataLoader(
@@ -195,7 +201,8 @@ def get_data_loaders(batch_size=BATCH_SIZE, num_workers=0, train_csv=None, val_c
         batch_size=batch_size, 
         shuffle=False, 
         num_workers=num_workers,
-        pin_memory=torch.cuda.is_available()
+        pin_memory=pin_memory,
+        persistent_workers=torch.cuda.is_available()
     )
     
     test_loader = DataLoader(
@@ -203,7 +210,8 @@ def get_data_loaders(batch_size=BATCH_SIZE, num_workers=0, train_csv=None, val_c
         batch_size=batch_size, 
         shuffle=False, 
         num_workers=num_workers,
-        pin_memory=torch.cuda.is_available()
+        pin_memory=pin_memory,
+        persistent_workers=torch.cuda.is_available()
     )
     
     logger.info(f"Data loaders created:")

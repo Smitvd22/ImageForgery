@@ -1,37 +1,47 @@
-# 🎯 Image Forgery Detection System
+# 🚀 Image Forgery Detection System
 
-A state-of-the-art machine learning system for detecting forged/manipulated images using advanced ensemble methods and deep learning.
+A high-performance image forgery detection system with **90.91% accuracy** using GPU-accelerated deep learning and ensemble methods.
 
-## 🏆 Performance Highlights
+## 🎯 Key Features
 
-- **Best Accuracy**: **80.0%** (Extra Trees model)
-- **Ensemble Performance**: Multiple models >70% accuracy
-- **AUC Score**: **0.93+** (Excellent discrimination)
-- **Target**: ✅ **80%+ Accuracy Achieved**
+- **🚀 GPU Acceleration**: Automatic GPU detection with CPU fallback
+- **🎯 High Accuracy**: 90.91% accuracy on test dataset
+- **🧠 Advanced ML**: Ensemble of CNN + traditional ML models
+- **⚡ Fast Processing**: ~15-16 images/second on GPU
+- **🔧 Easy Setup**: One-command installation and training
+
+## 📊 Performance Results
+
+- **Best Model**: Extra Trees Ensemble
+- **Test Accuracy**: 90.91%
+- **F1-Score**: 0.9090
+- **Precision**: 0.9096
+- **Recall**: 0.9091
 
 ## 🚀 Quick Start
 
-### 1. Setup
+### 1. Setup Environment
 ```bash
-# Clone or extract the workspace
-cd CLEAN_WORKSPACE
-
 # Install dependencies
 pip install -r requirements.txt
 
-# Test setup
-python setup_test.py
+# Optimize for GPU (optional)
+python gpu_optimizer.py
 ```
 
-### 2. Train Models
+### 2. Train Model
 ```bash
-python train.py
+# GPU-optimized training (automatic CPU fallback)
+python train_optimized.py
 ```
-**Expected**: 80%+ accuracy in ~10-15 minutes on CPU
 
-### 3. Predict Single Image
+### 3. Make Predictions
 ```bash
-python predict.py data/4cam_auth/canong3_02_sub_01.tif
+# Single image
+python predict_optimized.py data/4cam_auth/canong3_02_sub_01.tif
+
+# Batch processing
+python predict_optimized.py data/4cam_auth/ --output results.json
 ```
 
 ## 📊 Model Performance

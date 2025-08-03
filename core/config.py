@@ -10,6 +10,18 @@ import torch
 import warnings
 warnings.filterwarnings('ignore')
 
+# GPU Configuration and Detection
+GPU_AVAILABLE = torch.cuda.is_available()
+DEVICE = torch.device("cuda" if GPU_AVAILABLE else "cpu")
+GPU_NAME = torch.cuda.get_device_name(0) if GPU_AVAILABLE else "No GPU"
+GPU_MEMORY = torch.cuda.get_device_properties(0).total_memory / 1e9 if GPU_AVAILABLE else 0
+
+# GPU Optimization Settings
+if GPU_AVAILABLE:
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.enabled = True
+
 # Dataset Configuration
 DATA_ROOT = "./data"
 AUTHENTIC_DIR = os.path.join(DATA_ROOT, "4cam_auth")
@@ -44,25 +56,43 @@ USE_TIMM_MODELS = True  # Enable TIMM models for state-of-the-art architectures
 USE_ENSEMBLE = True     # Enable ensemble methods
 USE_ADVANCED_FUSION = True  # Advanced feature fusion techniques
 
-# State-of-the-Art ImageNet Models Configuration
+# State-of-the-Art ImageNet Models Configuration - Enhanced for Forgery Detection
 IMAGENET_MODELS = {
     'resnet152': {
         'enabled': True,
         'pretrained': True,
         'feature_dim': 2048,
-        'input_size': (384, 384)
+        'input_size': (384, 384),
+        'forgery_specific': True  # Add forgery-specific layers
     },
     'efficientnet_b7': {
         'enabled': True, 
         'pretrained': True,
         'feature_dim': 2560,
-        'input_size': (384, 384)
+        'input_size': (384, 384),
+        'forgery_specific': True
     },
     'convnext_base': {
         'enabled': True,
         'pretrained': True,
         'feature_dim': 1024,
-        'input_size': (384, 384)
+        'input_size': (384, 384),
+        'forgery_specific': True
+    },
+    # Add specialized forgery detection models
+    'swin_base_patch4_window7_224': {
+        'enabled': True,
+        'pretrained': True,
+        'feature_dim': 1024,
+        'input_size': (384, 384),
+        'forgery_specific': True
+    },
+    'vit_base_patch16_224': {
+        'enabled': True,
+        'pretrained': True,
+        'feature_dim': 768,
+        'input_size': (384, 384),
+        'forgery_specific': True
     }
 }
 
@@ -70,6 +100,40 @@ IMAGENET_MODELS = {
 HUGGINGFACE_MODELS = [
     "microsoft/resnet-50"
 ]
+
+# Forgery-Specific Detection Configuration
+FORGERY_DETECTION_CONFIG = {
+    'use_edge_analysis': True,
+    'use_frequency_analysis': True,
+    'use_compression_artifacts': True,
+    'use_noise_analysis': True,
+    'use_texture_analysis': True,
+    'use_color_inconsistency': True,
+    'use_lighting_analysis': True,
+    'use_shadow_analysis': True,
+    'use_reflection_analysis': True,
+    'use_perspective_analysis': True,
+    'patch_size': 64,  # For patch-based analysis
+    'overlap_ratio': 0.5,
+    'multi_scale_analysis': True,
+    'scales': [1.0, 0.75, 0.5, 0.25]
+}
+
+# Enhanced Batch Size Configuration
+if GPU_AVAILABLE:
+    GPU_BATCH_SIZE = 16  # Larger batch size for GPU
+    BATCH_SIZE = GPU_BATCH_SIZE
+    FORGERY_BATCH_SIZE = BATCH_SIZE * 2
+    # GPU-optimized dataloader settings
+    NUM_WORKERS = 8
+    PIN_MEMORY = True
+    PERSISTENT_WORKERS = True
+else:
+    BATCH_SIZE = 8  # Conservative for CPU
+    FORGERY_BATCH_SIZE = BATCH_SIZE
+    NUM_WORKERS = 4
+    PIN_MEMORY = False
+    PERSISTENT_WORKERS = False
 
 # Advanced Feature Extraction & Fusion Configuration
 FEATURE_FUSION_STRATEGY = "ultra_advanced_fusion"
@@ -101,6 +165,10 @@ XGB_PARAMS = {
     'colsample_bytree': 0.9,
     'colsample_bylevel': 0.9,
     'colsample_bynode': 0.9,
+    
+    # GPU Configuration
+    'tree_method': 'gpu_hist' if GPU_AVAILABLE else 'hist',
+    'gpu_id': 0 if GPU_AVAILABLE else None,
     
     # Regularization
     'min_child_weight': 5,
@@ -268,11 +336,19 @@ FEATURE_ENGINEERING = {
     'use_power_transform': True
 }
 
-# Hardware Configuration
+# Enhanced Hardware Configuration with GPU Optimization
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-NUM_WORKERS = 8 if torch.cuda.is_available() else 4
+NUM_WORKERS = 12 if torch.cuda.is_available() else 6  # Increased for better throughput
 PIN_MEMORY = torch.cuda.is_available()
 MIXED_PRECISION = torch.cuda.is_available()
+USE_GPU_OPTIMIZATION = torch.cuda.is_available()
+
+# GPU-specific configurations
+if torch.cuda.is_available():
+    # Optimize for GPU memory usage
+    torch.backends.cudnn.benchmark = True  # Optimize cudnn for consistent input sizes
+    torch.backends.cudnn.deterministic = False  # Allow non-deterministic for better performance
+    GPU_MEMORY_FRACTION = 0.9  # Use 90% of GPU memory
 
 # Logging Configuration
 LOG_LEVEL = "INFO"

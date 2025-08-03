@@ -74,7 +74,20 @@ class FinalUltraAdvancedTrainer:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         logger.info(f"Using device: {self.device}")
         
-        # Initialize CNN feature extractors
+        # Enable GPU optimizations if available
+        if torch.cuda.is_available():
+            logger.info(f"GPU: {torch.cuda.get_device_name()}")
+            logger.info(f"GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
+            torch.backends.cudnn.benchmark = True
+            # Enable mixed precision training
+            self.use_mixed_precision = True
+            from torch.cuda.amp import GradScaler, autocast
+            self.scaler = GradScaler()
+        else:
+            logger.info("Using CPU - consider installing CUDA for better performance")
+            self.use_mixed_precision = False
+        
+        # Initialize CNN feature extractors with GPU support
         self.cnn_models = self._initialize_cnn_models()
         
         # Initialize ML models
@@ -83,38 +96,78 @@ class FinalUltraAdvancedTrainer:
         self.final_ensemble = None
         
     def _initialize_cnn_models(self):
-        """Initialize multiple CNN models for diverse feature extraction"""
-        logger.info("Initializing multi-scale CNN feature extractors...")
+        """Initialize multiple CNN models for diverse feature extraction with GPU support"""
+        logger.info("Initializing advanced CNN feature extractors for forgery detection...")
         
         models = {}
         
-        # ResNet50 for robust features
+        # ResNet50 for robust features - optimized for forgery detection
         try:
             resnet = timm.create_model('resnet50', pretrained=True, num_classes=0)
             resnet.eval()
+            if torch.cuda.is_available():
+                resnet = resnet.to(self.device)
             models['resnet50'] = resnet
             logger.info("✅ ResNet50 loaded successfully")
         except Exception as e:
             logger.warning(f"Failed to load ResNet50: {e}")
         
-        # EfficientNet for efficient features
+        # EfficientNet for efficient features - good for artifact detection
         try:
             efficientnet = timm.create_model('efficientnet_b0', pretrained=True, num_classes=0)
             efficientnet.eval()
+            if torch.cuda.is_available():
+                efficientnet = efficientnet.to(self.device)
             models['efficientnet_b0'] = efficientnet
             logger.info("✅ EfficientNet-B0 loaded successfully")
         except Exception as e:
             logger.warning(f"Failed to load EfficientNet: {e}")
         
-        # DenseNet for dense features
+        # DenseNet for dense features - excellent for texture analysis
         try:
             densenet = timm.create_model('densenet121', pretrained=True, num_classes=0)
             densenet.eval()
+            if torch.cuda.is_available():
+                densenet = densenet.to(self.device)
             models['densenet121'] = densenet
             logger.info("✅ DenseNet121 loaded successfully")
         except Exception as e:
             logger.warning(f"Failed to load DenseNet: {e}")
         
+        # Vision Transformer - great for global context and inconsistencies
+        try:
+            vit = timm.create_model('vit_base_patch16_224', pretrained=True, num_classes=0)
+            vit.eval()
+            if torch.cuda.is_available():
+                vit = vit.to(self.device)
+            models['vit_base'] = vit
+            logger.info("✅ Vision Transformer loaded successfully")
+        except Exception as e:
+            logger.warning(f"Failed to load Vision Transformer: {e}")
+        
+        # Swin Transformer - excellent for multi-scale analysis
+        try:
+            swin = timm.create_model('swin_base_patch4_window7_224', pretrained=True, num_classes=0)
+            swin.eval()
+            if torch.cuda.is_available():
+                swin = swin.to(self.device)
+            models['swin_base'] = swin
+            logger.info("✅ Swin Transformer loaded successfully")
+        except Exception as e:
+            logger.warning(f"Failed to load Swin Transformer: {e}")
+        
+        # ConvNeXt - modern CNN with transformer-like design
+        try:
+            convnext = timm.create_model('convnext_base', pretrained=True, num_classes=0)
+            convnext.eval()
+            if torch.cuda.is_available():
+                convnext = convnext.to(self.device)
+            models['convnext_base'] = convnext
+            logger.info("✅ ConvNeXt loaded successfully")
+        except Exception as e:
+            logger.warning(f"Failed to load ConvNeXt: {e}")
+        
+        logger.info(f"✅ Loaded {len(models)} advanced CNN models for forgery detection")
         return models
     
     def _create_base_models(self):
@@ -491,21 +544,42 @@ class FinalUltraAdvancedTrainer:
             return np.zeros(150, dtype=np.float32)
     
     def extract_cnn_features(self, image_tensor):
-        """Extract features from multiple CNN models"""
+        """Extract features from multiple CNN models with GPU acceleration"""
         all_features = []
         
+        # Move tensor to device
+        if torch.cuda.is_available():
+            image_tensor = image_tensor.to(self.device)
+        
         with torch.no_grad():
-            for model_name, model in self.cnn_models.items():
-                try:
-                    features = model(image_tensor)
-                    if len(features.shape) > 2:
-                        features = torch.mean(features, dim=[2, 3])  # Global average pooling
-                    all_features.append(features.cpu().numpy())
-                except Exception as e:
-                    logger.warning(f"Error extracting features from {model_name}: {e}")
+            # Use mixed precision if available
+            if self.use_mixed_precision and torch.cuda.is_available():
+                from torch.cuda.amp import autocast
+                with autocast():
+                    for model_name, model in self.cnn_models.items():
+                        try:
+                            features = model(image_tensor)
+                            if len(features.shape) > 2:
+                                features = torch.mean(features, dim=[2, 3])  # Global average pooling
+                            all_features.append(features.cpu().numpy())
+                        except Exception as e:
+                            logger.warning(f"Error extracting features from {model_name}: {e}")
+            else:
+                for model_name, model in self.cnn_models.items():
+                    try:
+                        features = model(image_tensor)
+                        if len(features.shape) > 2:
+                            features = torch.mean(features, dim=[2, 3])  # Global average pooling
+                        if torch.cuda.is_available():
+                            features = features.cpu()
+                        all_features.append(features.numpy())
+                    except Exception as e:
+                        logger.warning(f"Error extracting features from {model_name}: {e}")
         
         if all_features:
-            return np.concatenate(all_features, axis=1)
+            combined_features = np.concatenate(all_features, axis=1)
+            logger.debug(f"Extracted {combined_features.shape[1]} CNN features")
+            return combined_features
         else:
             return np.zeros((image_tensor.shape[0], 512))  # Fallback
     
