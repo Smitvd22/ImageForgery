@@ -1,0 +1,19 @@
+{
+  "gpu_available": true,
+  "gpu_name": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+  "device": "cuda",
+  "best_model": "rf",
+  "best_metrics": {
+    "accuracy": 0.4909090909090909,
+    "precision": 0.24099173553719008,
+    "recall": 0.4909090909090909,
+    "f1": 0.3232815964523282,
+    "balanced_accuracy": 0.5,
+    "sensitivity": 1.0,
+    "specificity": 0.0,
+    "balanced_score": 0.5954545454545455
+  },
+  "feature_count": 4517,
+  "sample_count": 253,
+  "class_weights": {
+    
