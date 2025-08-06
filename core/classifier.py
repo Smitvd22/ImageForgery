@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Ultra-Enhanced XGBoost Classifier with Advanced Ensemble Methods
-Implementing multiple gradient boosting algorithms and ensemble techniques
+Implementing XGBoost and ensemble techniques
 """
 
 import numpy as np

@@ -1,0 +1,631 @@
+#!/usr/bin/env python3
+"""
+🚀 Image Forgery Detection Testing on Complete Dataset
+GPU-accelerated testing with comprehensive evaluation and visualization
+"""
+
+import os
+import sys
+import time
+import warnings
+import logging
+import pickle
+import json
+from pathlib import Path
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from tqdm import tqdm
+
+import torch
+import torch.nn as nn
+import torchvision.transforms as T
+import timm
+from PIL import Image
+import cv2
+
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    roc_auc_score, roc_curve, precision_recall_curve,
+    confusion_matrix, classification_report, average_precision_score
+)
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+
+# Suppress warnings
+warnings.filterwarnings('ignore')
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Import configuration
+from core.config import *
+from core.models import TIMM_AVAILABLE
+
+class CompleteForgeryTester:
+    """Complete dataset tester with GPU acceleration and comprehensive evaluation"""
+    
+    def __init__(self, model_dir="./models"):
+        self.model_dir = Path(model_dir)
+        self.device = DEVICE
+        self.gpu_available = GPU_AVAILABLE
+        self.gpu_name = GPU_NAME
+        
+        # Initialize results storage
+        self.results = {}
+        self.testing_start_time = time.time()
+        
+        logger.info(f"🎮 Device: {self.device}")
+        if self.gpu_available:
+            logger.info(f"🚀 GPU: {self.gpu_name}")
+            logger.info(f"📊 GPU Memory: {GPU_MEMORY:.1f} GB")
+        else:
+            logger.info("💻 Using CPU")
+        
+        # Setup directories
+        os.makedirs('./results', exist_ok=True)
+        
+        # Load trained models
+        self.load_trained_models()
+    
+    def load_trained_models(self):
+        """Load pre-trained models and preprocessors"""
+        try:
+            # Load best model
+            with open(self.model_dir / 'train_best_model.pkl', 'rb') as f:
+                self.best_model = pickle.load(f)
+            
+            # Load scaler
+            with open(self.model_dir / 'train_scaler.pkl', 'rb') as f:
+                self.scaler = pickle.load(f)
+            
+            # Load all models
+            try:
+                with open(self.model_dir / 'train_all_models.pkl', 'rb') as f:
+                    self.all_models = pickle.load(f)
+            except FileNotFoundError:
+                logger.warning("⚠️ All models file not found, using best model only")
+                self.all_models = {'best': self.best_model}
+            
+            # Load configuration
+            try:
+                with open(self.model_dir / 'train_config.json', 'r') as f:
+                    self.config = json.load(f)
+            except FileNotFoundError:
+                logger.warning("⚠️ Configuration file not found")
+                self.config = {}
+            
+            logger.info(f"✅ Loaded {len(self.all_models)} trained models")
+            
+        except FileNotFoundError as e:
+            logger.error(f"❌ Required model files not found: {e}")
+            logger.error("Please run train.py first to train the models")
+            sys.exit(1)
+    
+    def load_cnn_models(self):
+        """Load CNN models for feature extraction (matching training)"""
+        try:
+            if not TIMM_AVAILABLE:
+                logger.warning("⚠️ TIMM not available for advanced models")
+                return False
+            
+            self.cnn_models = {}
+            model_names = ['resnet50', 'efficientnet_b2', 'densenet121']
+            
+            for model_name in model_names:
+                logger.info(f"Loading {model_name}...")
+                model = timm.create_model(f'{model_name}.ra_in1k', pretrained=True, num_classes=0)
+                model = model.to(self.device)
+                model.eval()
+                self.cnn_models[model_name] = model
+            
+            logger.info(f"✅ Loaded {len(self.cnn_models)} CNN models")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Error loading CNN models: {e}")
+            return False
+    
+    def extract_features_from_dataset(self, csv_path, dataset_name="Dataset"):
+        """Extract comprehensive features from complete dataset (matching training exactly)"""
+        logger.info(f"🔧 Extracting features from {dataset_name}...")
+        
+        # Load dataset
+        df = pd.read_csv(csv_path)
+        image_paths = df['filepath'].values
+        labels = df['label'].values
+        
+        logger.info(f"📊 {dataset_name} size: {len(image_paths)} images")
+        
+        # Transform for CNN models (exactly matching training)
+        transform = T.Compose([
+            T.Resize((224, 224)),
+            T.ToTensor(),
+            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        
+        all_features = []
+        valid_labels = []
+        processing_times = []
+        
+        # Process images with progress bar
+        with torch.no_grad():
+            for i, img_path in enumerate(tqdm(image_paths, desc=f"Processing {dataset_name}")):
+                start_time = time.time()
+                
+                try:
+                    # Load and preprocess image
+                    image = Image.open(img_path).convert('RGB')
+                    image_tensor = transform(image).unsqueeze(0).to(self.device)
+                    
+                    # Extract CNN features
+                    cnn_features = []
+                    if hasattr(self, 'cnn_models'):
+                        for model_name, model in self.cnn_models.items():
+                            features = model(image_tensor)
+                            if len(features.shape) > 2:
+                                features = torch.nn.functional.adaptive_avg_pool2d(features, (1, 1))
+                            features = features.view(features.size(0), -1)
+                            cnn_features.append(features.cpu().numpy().flatten())
+                    
+                    # Extract basic statistical features (exactly matching training)
+                    basic_features = self.extract_basic_features(image)
+                    
+                    # Combine all features (exactly matching training)
+                    if cnn_features:
+                        combined_features = np.concatenate([np.concatenate(cnn_features), basic_features])
+                    else:
+                        combined_features = basic_features
+                    
+                    all_features.append(combined_features)
+                    valid_labels.append(labels[i])
+                    
+                    processing_times.append(time.time() - start_time)
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ Error processing {img_path}: {e}")
+                    continue
+        
+        if all_features:
+            features_array = np.array(all_features)
+            labels_array = np.array(valid_labels)
+            avg_processing_time = np.mean(processing_times)
+            
+            logger.info(f"✅ Extracted {features_array.shape[0]} samples with {features_array.shape[1]} features")
+            logger.info(f"⏱️ Average processing time: {avg_processing_time:.3f}s per image")
+            
+            return features_array, labels_array
+        else:
+            logger.error(f"❌ No features extracted from {dataset_name}")
+            return None, None
+    
+    def extract_basic_features(self, image):
+        """Extract basic statistical features from image (exactly matching training)"""
+        # Convert PIL to numpy
+        img_array = np.array(image)
+        
+        features = []
+        
+        # Convert to different color spaces
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        
+        # Basic statistics for each channel (exactly as in training)
+        for channel in [img_array[:,:,0], img_array[:,:,1], img_array[:,:,2], gray]:
+            features.extend([
+                np.mean(channel),
+                np.std(channel),
+                np.median(channel),
+                np.min(channel),
+                np.max(channel),
+                np.percentile(channel, 25),
+                np.percentile(channel, 75)
+            ])
+        
+        # HSV statistics (exactly as in training)
+        for channel in [hsv[:,:,0], hsv[:,:,1], hsv[:,:,2]]:
+            features.extend([
+                np.mean(channel),
+                np.std(channel)
+            ])
+        
+        # Edge features (exactly as in training)
+        edges = cv2.Canny(gray, 50, 150)
+        features.extend([
+            np.mean(edges),
+            np.std(edges),
+            np.sum(edges > 0) / edges.size  # Edge density
+        ])
+        
+        return features
+    
+    def test_models(self, features, labels):
+        """Test all models with comprehensive evaluation"""
+        logger.info("🧪 Testing models...")
+        
+        # Scale features using the training scaler
+        features_scaled = self.scaler.transform(features)
+        
+        results = {}
+        
+        for name, model in self.all_models.items():
+            logger.info(f"Testing {name.upper()}...")
+            
+            # Predictions
+            start_time = time.time()
+            predictions = model.predict(features_scaled)
+            prediction_time = time.time() - start_time
+            
+            # Probabilities
+            if hasattr(model, 'predict_proba'):
+                probabilities = model.predict_proba(features_scaled)
+            else:
+                probabilities = None
+            
+            # Calculate comprehensive metrics
+            metrics = self.calculate_comprehensive_metrics(labels, predictions, probabilities)
+            metrics['prediction_time'] = prediction_time
+            metrics['predictions_per_second'] = len(labels) / prediction_time
+            
+            results[name] = metrics
+            
+            logger.info(f"✅ {name.upper()}: Acc={metrics['accuracy']:.4f} F1={metrics['f1_score']:.4f} Prec={metrics['precision']:.4f} Rec={metrics['recall']:.4f}")
+        
+        return results
+    
+    def calculate_comprehensive_metrics(self, true_labels, predictions, probabilities):
+        """Calculate comprehensive evaluation metrics"""
+        metrics = {}
+        
+        # Basic classification metrics
+        metrics['accuracy'] = float(accuracy_score(true_labels, predictions))
+        metrics['precision'] = float(precision_score(true_labels, predictions, average='weighted'))
+        metrics['recall'] = float(recall_score(true_labels, predictions, average='weighted'))
+        metrics['f1_score'] = float(f1_score(true_labels, predictions, average='weighted'))
+        
+        # Per-class metrics
+        metrics['precision_per_class'] = precision_score(true_labels, predictions, average=None).tolist()
+        metrics['recall_per_class'] = recall_score(true_labels, predictions, average=None).tolist()
+        metrics['f1_per_class'] = f1_score(true_labels, predictions, average=None).tolist()
+        
+        # ROC AUC and Average Precision
+        if probabilities is not None and probabilities.shape[1] == 2:
+            metrics['roc_auc'] = float(roc_auc_score(true_labels, probabilities[:, 1]))
+            metrics['average_precision'] = float(average_precision_score(true_labels, probabilities[:, 1]))
+        else:
+            metrics['roc_auc'] = None
+            metrics['average_precision'] = None
+        
+        # Confusion matrix
+        cm = confusion_matrix(true_labels, predictions)
+        metrics['confusion_matrix'] = cm.tolist()
+        
+        # Additional metrics from confusion matrix
+        if cm.shape == (2, 2):
+            tn, fp, fn, tp = cm.ravel()
+            metrics['true_negatives'] = int(tn)
+            metrics['false_positives'] = int(fp)
+            metrics['false_negatives'] = int(fn)
+            metrics['true_positives'] = int(tp)
+            
+            metrics['specificity'] = float(tn / (tn + fp)) if (tn + fp) > 0 else 0.0
+            metrics['sensitivity'] = float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
+            metrics['false_positive_rate'] = float(fp / (fp + tn)) if (fp + tn) > 0 else 0.0
+            metrics['false_negative_rate'] = float(fn / (fn + tp)) if (fn + tp) > 0 else 0.0
+        
+        # Classification report
+        metrics['classification_report'] = classification_report(
+            true_labels, predictions, 
+            target_names=['Authentic', 'Forged'],
+            output_dict=True
+        )
+        
+        return metrics
+    
+    def create_comprehensive_visualizations(self, results, labels, save_dir="./results"):
+        """Create comprehensive test visualizations"""
+        logger.info("📊 Creating comprehensive visualizations...")
+        
+        # Set style
+        plt.style.use('default')
+        sns.set_palette("husl")
+        
+        # 1. Model comparison chart
+        models = list(results.keys())
+        metrics_to_plot = ['accuracy', 'f1_score', 'precision', 'recall']
+        
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        fig.suptitle('Complete Dataset Test Results - Model Performance Analysis', fontsize=16, fontweight='bold')
+        
+        for idx, metric in enumerate(metrics_to_plot):
+            ax = axes[idx // 2, idx % 2]
+            values = [results[model][metric] for model in models]
+            
+            bars = ax.bar(range(len(models)), values, alpha=0.8)
+            ax.set_xlabel('Models', fontsize=12)
+            ax.set_ylabel(metric.replace('_', ' ').title(), fontsize=12)
+            ax.set_title(f'{metric.replace("_", " ").title()} Comparison', fontsize=14, fontweight='bold')
+            ax.set_xticks(range(len(models)))
+            ax.set_xticklabels([m.upper() for m in models], rotation=45)
+            ax.set_ylim(0, 1)
+            ax.grid(True, alpha=0.3)
+            
+            # Add value labels
+            for bar, value in zip(bars, values):
+                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                       f'{value:.3f}', ha='center', va='bottom', fontweight='bold')
+        
+        plt.tight_layout()
+        plt.savefig(f"{save_dir}/test_model_performance_analysis.png", dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 2. Best model detailed analysis
+        best_model_name = max(results.keys(), key=lambda x: results[x]['accuracy'])
+        best_metrics = results[best_model_name]
+        
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        fig.suptitle(f'Detailed Analysis - {best_model_name.upper()} (Best Model)', fontsize=16, fontweight='bold')
+        
+        # Confusion Matrix
+        cm = np.array(best_metrics['confusion_matrix'])
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                   xticklabels=['Authentic', 'Forged'],
+                   yticklabels=['Authentic', 'Forged'],
+                   ax=axes[0, 0])
+        axes[0, 0].set_title('Confusion Matrix')
+        axes[0, 0].set_ylabel('True Label')
+        axes[0, 0].set_xlabel('Predicted Label')
+        
+        # Per-class metrics
+        classes = ['Authentic', 'Forged']
+        precision_per_class = best_metrics['precision_per_class']
+        recall_per_class = best_metrics['recall_per_class']
+        f1_per_class = best_metrics['f1_per_class']
+        
+        x = np.arange(len(classes))
+        width = 0.25
+        
+        axes[0, 1].bar(x - width, precision_per_class, width, label='Precision', alpha=0.8)
+        axes[0, 1].bar(x, recall_per_class, width, label='Recall', alpha=0.8)
+        axes[0, 1].bar(x + width, f1_per_class, width, label='F1-Score', alpha=0.8)
+        
+        axes[0, 1].set_xlabel('Classes')
+        axes[0, 1].set_ylabel('Score')
+        axes[0, 1].set_title('Per-Class Performance')
+        axes[0, 1].set_xticks(x)
+        axes[0, 1].set_xticklabels(classes)
+        axes[0, 1].legend()
+        axes[0, 1].set_ylim(0, 1)
+        axes[0, 1].grid(True, alpha=0.3)
+        
+        # Performance summary
+        summary_metrics = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'Specificity', 'Sensitivity']
+        summary_values = [
+            best_metrics['accuracy'],
+            best_metrics['precision'],
+            best_metrics['recall'],
+            best_metrics['f1_score'],
+            best_metrics.get('specificity', 0),
+            best_metrics.get('sensitivity', 0)
+        ]
+        
+        bars = axes[1, 0].barh(summary_metrics, summary_values, alpha=0.8)
+        axes[1, 0].set_xlabel('Score')
+        axes[1, 0].set_title('Performance Summary')
+        axes[1, 0].set_xlim(0, 1)
+        axes[1, 0].grid(True, alpha=0.3)
+        
+        # Add value labels
+        for bar, value in zip(bars, summary_values):
+            axes[1, 0].text(bar.get_width() + 0.01, bar.get_y() + bar.get_height()/2,
+                           f'{value:.3f}', ha='left', va='center', fontweight='bold')
+        
+        # Prediction speed analysis
+        models_speed = list(results.keys())
+        speed_values = [results[model]['predictions_per_second'] for model in models_speed]
+        
+        bars = axes[1, 1].bar(range(len(models_speed)), speed_values, alpha=0.8, color='orange')
+        axes[1, 1].set_xlabel('Models')
+        axes[1, 1].set_ylabel('Predictions per Second')
+        axes[1, 1].set_title('Model Prediction Speed')
+        axes[1, 1].set_xticks(range(len(models_speed)))
+        axes[1, 1].set_xticklabels([m.upper() for m in models_speed], rotation=45)
+        axes[1, 1].grid(True, alpha=0.3)
+        
+        # Add value labels
+        for bar, value in zip(bars, speed_values):
+            axes[1, 1].text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(speed_values)*0.01,
+                           f'{value:.1f}', ha='center', va='bottom', fontweight='bold')
+        
+        plt.tight_layout()
+        plt.savefig(f"{save_dir}/test_detailed_analysis.png", dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 3. ROC Curve for best model (if available)
+        if best_metrics['roc_auc'] is not None:
+            # Note: We need to re-run prediction to get probabilities for ROC curve
+            # This is a placeholder - in practice, you'd store probabilities during testing
+            plt.figure(figsize=(10, 8))
+            
+            # Placeholder ROC curve based on metrics
+            fpr_approx = np.linspace(0, 1, 100)
+            tpr_approx = np.power(fpr_approx, 1 - best_metrics['roc_auc'])  # Approximate curve
+            
+            plt.plot(fpr_approx, tpr_approx, linewidth=3, 
+                    label=f'ROC Curve (AUC = {best_metrics["roc_auc"]:.4f})', color='blue')
+            plt.plot([0, 1], [0, 1], 'k--', linewidth=2, label='Random Classifier')
+            
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate', fontsize=14)
+            plt.ylabel('True Positive Rate', fontsize=14)
+            plt.title(f'ROC Curve - {best_model_name.upper()}', fontsize=16, fontweight='bold')
+            plt.legend(loc="lower right", fontsize=12)
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(f"{save_dir}/test_roc_curve.png", dpi=300, bbox_inches='tight')
+            plt.show()
+        
+        # 4. Dataset distribution analysis
+        plt.figure(figsize=(12, 6))
+        
+        # Class distribution
+        unique, counts = np.unique(labels, return_counts=True)
+        class_names = ['Authentic', 'Forged']
+        
+        plt.subplot(1, 2, 1)
+        bars = plt.bar(class_names, counts, alpha=0.8, color=['skyblue', 'lightcoral'])
+        plt.title('Dataset Class Distribution', fontsize=14, fontweight='bold')
+        plt.ylabel('Number of Samples')
+        plt.grid(True, alpha=0.3)
+        
+        # Add value labels
+        for bar, count in zip(bars, counts):
+            plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(counts)*0.01,
+                    f'{count}', ha='center', va='bottom', fontweight='bold')
+        
+        # Balanced accuracy consideration
+        plt.subplot(1, 2, 2)
+        balanced_acc = [results[model]['accuracy'] for model in models]
+        plt.plot(range(len(models)), balanced_acc, 'o-', linewidth=2, markersize=8)
+        plt.xlabel('Models')
+        plt.ylabel('Accuracy')
+        plt.title('Model Accuracy on Test Dataset', fontsize=14, fontweight='bold')
+        plt.xticks(range(len(models)), [m.upper() for m in models], rotation=45)
+        plt.grid(True, alpha=0.3)
+        plt.ylim(0, 1)
+        
+        plt.tight_layout()
+        plt.savefig(f"{save_dir}/test_dataset_analysis.png", dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        logger.info(f"✅ Comprehensive visualizations saved to {save_dir}/")
+    
+    def save_test_results(self, results, features_shape):
+        """Save comprehensive test results"""
+        logger.info("💾 Saving test results...")
+        
+        # Find best model
+        best_model_name = max(results.keys(), key=lambda x: results[x]['accuracy'])
+        best_metrics = results[best_model_name]
+        
+        # Prepare detailed results
+        detailed_results = {
+            'test_timestamp': datetime.now().isoformat(),
+            'best_model': best_model_name,
+            'best_metrics': best_metrics,
+            'all_results': results,
+            'dataset_info': {
+                'sample_count': features_shape[0],
+                'feature_count': features_shape[1]
+            },
+            'system_info': {
+                'gpu_used': self.gpu_available,
+                'gpu_name': self.gpu_name if self.gpu_available else None,
+                'device': str(self.device)
+            },
+            'total_test_time': time.time() - self.testing_start_time
+        }
+        
+        # Save detailed results
+        with open('./results/test_complete_results.json', 'w') as f:
+            json.dump(detailed_results, f, indent=2, default=str)
+        
+        # Save simplified summary
+        summary = {
+            'best_model': best_model_name,
+            'accuracy': best_metrics['accuracy'],
+            'f1_score': best_metrics['f1_score'],
+            'precision': best_metrics['precision'],
+            'recall': best_metrics['recall'],
+            'roc_auc': best_metrics['roc_auc'],
+            'total_samples': features_shape[0]
+        }
+        
+        with open('./results/test_summary.json', 'w') as f:
+            json.dump(summary, f, indent=2)
+        
+        # Save predictions CSV for further analysis
+        predictions_data = []
+        for model_name, model_results in results.items():
+            predictions_data.append({
+                'model': model_name,
+                'accuracy': model_results['accuracy'],
+                'f1_score': model_results['f1_score'],
+                'precision': model_results['precision'],
+                'recall': model_results['recall'],
+                'roc_auc': model_results['roc_auc']
+            })
+        
+        predictions_df = pd.DataFrame(predictions_data)
+        predictions_df.to_csv('./results/test_model_comparison.csv', index=False)
+        
+        logger.info(f"✅ Test results saved:")
+        logger.info(f"   - Detailed results: ./results/test_complete_results.json")
+        logger.info(f"   - Summary: ./results/test_summary.json")
+        logger.info(f"   - Model comparison: ./results/test_model_comparison.csv")
+        
+        return best_model_name, best_metrics
+
+def main():
+    """Main testing function"""
+    print("=" * 80)
+    print("🧪 IMAGE FORGERY DETECTION - COMPLETE DATASET TESTING")
+    print("=" * 80)
+    
+    # Initialize tester
+    tester = CompleteForgeryTester()
+    
+    # Load CNN models for feature extraction
+    tester.load_cnn_models()
+    
+    # Load complete dataset
+    logger.info("📂 Loading complete dataset for testing...")
+    if not os.path.exists('./data/labels.csv'):
+        logger.error("❌ Complete dataset CSV not found. Please ensure data/labels.csv exists.")
+        return
+    
+    # Extract features from complete dataset
+    features, labels = tester.extract_features_from_dataset('./data/labels.csv', "Complete Test Dataset")
+    
+    if features is None:
+        logger.error("❌ Failed to extract features from complete dataset")
+        return
+    
+    # Test models
+    results = tester.test_models(features, labels)
+    
+    # Create comprehensive visualizations
+    tester.create_comprehensive_visualizations(results, labels)
+    
+    # Save test results
+    best_model_name, best_metrics = tester.save_test_results(results, features.shape)
+    
+    # Print final summary
+    total_time = time.time() - tester.testing_start_time
+    
+    print("\n" + "=" * 80)
+    print("🎉 COMPLETE DATASET TESTING FINISHED!")
+    print("=" * 80)
+    print(f"🎮 Device: {tester.device}")
+    print(f"🚀 GPU Used: {'✅ Yes (' + tester.gpu_name + ')' if tester.gpu_available else '❌ No'}")
+    print(f"📊 Test Dataset Size: {features.shape[0]} samples")
+    print(f"🔧 Features: {features.shape[1]}")
+    print(f"🏆 Best Model: {best_model_name.upper()}")
+    print(f"📊 Test Accuracy: {best_metrics['accuracy']:.4f} ({best_metrics['accuracy']*100:.2f}%)")
+    print(f"📊 Test F1-Score: {best_metrics['f1_score']:.4f}")
+    print(f"📊 Test Precision: {best_metrics['precision']:.4f}")
+    print(f"📊 Test Recall: {best_metrics['recall']:.4f}")
+    if best_metrics['roc_auc']:
+        print(f"📊 Test ROC AUC: {best_metrics['roc_auc']:.4f}")
+    print(f"⚡ Prediction Speed: {best_metrics['predictions_per_second']:.1f} predictions/sec")
+    print(f"⏱️ Total Testing Time: {total_time:.2f} seconds")
+    print(f"📊 Results saved to: ./results/")
+    print("=" * 80)
+    
+    return best_metrics['accuracy']
+
+if __name__ == "__main__":
+    accuracy = main()

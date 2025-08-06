@@ -44,8 +44,11 @@ class OptimizedPredictor:
     def load_models(self):
         """Load trained models and components"""
         try:
-            # Load best model
-            model_path = './models/optimized_best_model.pkl'
+            # Load best model (try complete first, then optimized)
+            model_path = './models/complete_best_model.pkl'
+            if not os.path.exists(model_path):
+                model_path = './models/optimized_best_model.pkl'
+            
             if os.path.exists(model_path):
                 with open(model_path, 'rb') as f:
                     self.model = pickle.load(f)
@@ -67,8 +70,11 @@ class OptimizedPredictor:
                 logger.error("❌ No trained model found")
                 return False
             
-            # Load scaler
-            scaler_path = './models/optimized_scaler.pkl'
+            # Load scaler (try complete first, then optimized)
+            scaler_path = './models/complete_scaler.pkl'
+            if not os.path.exists(scaler_path):
+                scaler_path = './models/optimized_scaler.pkl'
+            
             if os.path.exists(scaler_path):
                 with open(scaler_path, 'rb') as f:
                     self.scaler = pickle.load(f)
@@ -86,8 +92,11 @@ class OptimizedPredictor:
                         logger.info(f"✅ Fallback scaler loaded: {path}")
                         break
             
-            # Load configuration
-            config_path = './models/optimized_config.json'
+            # Load configuration (try complete first, then optimized)
+            config_path = './models/complete_config.json'
+            if not os.path.exists(config_path):
+                config_path = './models/optimized_config.json'
+            
             if os.path.exists(config_path):
                 with open(config_path, 'r') as f:
                     self.config = json.load(f)

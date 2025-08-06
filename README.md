@@ -9,6 +9,8 @@ A high-performance image forgery detection system with **90.91% accuracy** using
 - **🧠 Advanced ML**: Ensemble of CNN + traditional ML models
 - **⚡ Fast Processing**: ~15-16 images/second on GPU
 - **🔧 Easy Setup**: One-command installation and training
+- **🔊 Comprehensive Noise Handling**: Advanced detection and suppression of multiple noise types
+- **🎨 Adaptive Preprocessing**: Edge-preserving enhancement and artifact removal
 
 ## 📊 Performance Results
 
@@ -22,11 +24,11 @@ A high-performance image forgery detection system with **90.91% accuracy** using
 
 ### 1. Setup Environment
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Check and install dependencies
+python setup.py
 
-# Optimize for GPU (optional)
-python gpu_optimizer.py
+# Or manually install
+pip install -r requirements.txt
 ```
 
 ### 2. Train Model
@@ -42,6 +44,12 @@ python predict_optimized.py data/4cam_auth/canong3_02_sub_01.tif
 
 # Batch processing
 python predict_optimized.py data/4cam_auth/ --output results.json
+
+# Complete testing
+python test_optimized_complete.py
+
+# Test noise suppression capabilities
+python demo_noise_suppression.py data/4cam_auth/canong3_02_sub_01.tif
 ```
 
 ## 📊 Model Performance
@@ -67,6 +75,10 @@ python predict_optimized.py data/4cam_auth/ --output results.json
 - **Cross-Validation**: Stratified 10-fold validation
 
 ### Preprocessing Pipeline
+- **Comprehensive Noise Suppression**: Gaussian, salt-pepper, Poisson, speckle, uniform noise detection and removal
+- **Adaptive Filtering**: Wiener, bilateral, non-local means, and median filtering
+- **Edge-Preserving Enhancement**: CLAHE, adaptive gamma correction, local contrast normalization
+- **Sparkle Noise Suppression**: Custom morphological filtering for sensor artifacts
 - Variance filtering: 4,502 → 1,465 features
 - Feature selection: Top 200 most informative features
 - Standardization and scaling
@@ -74,35 +86,44 @@ python predict_optimized.py data/4cam_auth/ --output results.json
 ## 📁 Project Structure
 
 ```
-CLEAN_WORKSPACE/
-├── train.py              # Main training script (80% accuracy)
-├── predict.py            # Single image prediction
-├── setup_test.py         # Workspace validation
-├── requirements.txt      # Dependencies
-├── .gitignore           # Git ignore rules
-├── PROJECT_SUMMARY.md   # Detailed project summary
+ImageForgery/
+├── 🚀 train_optimized.py        # GPU-optimized training (90.91% accuracy)
+├── 🔮 predict_optimized.py      # GPU-optimized prediction
+├── 🧪 test_optimized_complete.py # Complete testing suite
+├── 🛠️ setup.py                 # Environment setup script
+├── 📋 requirements.txt          # Dependencies
+├── 📋 requirements_gpu.txt      # GPU-specific dependencies
+├── 🚫 .gitignore              # Git ignore rules
 │
-├── core/                # Core modules
-│   ├── config.py        # Configuration settings
-│   ├── models.py        # Model architectures
-│   ├── dataset.py       # Data loading
-│   ├── classifier.py    # ML classifiers
-│   └── preprocessing.py # Image preprocessing
+├── core/                      # Core modules
+│   ├── config.py              # Configuration settings
+│   ├── models.py              # CNN model architectures
+│   ├── dataset.py             # Data loading utilities
+│   ├── classifier.py          # ML classifiers
+│   ├── preprocessing.py       # Image preprocessing
+│   └── __init__.py
 │
-├── data/                # Dataset
-│   ├── train_labels.csv # Training labels
-│   ├── val_labels.csv   # Validation labels 
-│   ├── test_labels.csv  # Test labels
-│   ├── 4cam_auth/       # Authentic images (183)
-│   └── 4cam_splc/       # Forged images (180)
+├── data/                      # Dataset
+│   ├── train_labels.csv       # Training labels
+│   ├── val_labels.csv         # Validation labels 
+│   ├── test_labels.csv        # Test labels
+│   ├── 4cam_auth/             # Authentic images (183)
+│   └── 4cam_splc/             # Forged images (180)
 │
-├── utils/               # Utilities
-│   ├── evaluate.py      # Model evaluation
-│   └── metrics.py       # Performance metrics
+├── models/                    # Trained models & results
+│   ├── optimized_best_model.pkl    # Primary model (90.91%)
+│   ├── optimized_scaler.pkl        # Feature scaler
+│   ├── complete_dataset_*.json/png # Latest evaluation results
+│   └── README.md                   # Model documentation
 │
-└── docs/                # Documentation
-    ├── README.md        # This file
-    └── USAGE_GUIDE.md   # Detailed usage guide
+├── utils/                     # Utilities
+│   ├── evaluate.py            # Model evaluation functions
+│   ├── test_system.py         # System validation
+│   └── __init__.py
+│
+└── docs/                      # Documentation
+    ├── USAGE_GUIDE.md         # Detailed usage guide
+    └── README.md              # Additional documentation
 ```
 
 ## 🔧 Technical Details

@@ -119,6 +119,35 @@ FORGERY_DETECTION_CONFIG = {
     'scales': [1.0, 0.75, 0.5, 0.25]
 }
 
+# Comprehensive Noise Suppression Configuration
+NOISE_SUPPRESSION_CONFIG = {
+    'enable_comprehensive_suppression': True,
+    'preserve_edges': True,
+    'gaussian_noise_threshold': 0.3,
+    'salt_pepper_threshold': 0.2,
+    'poisson_noise_threshold': 0.4,
+    'speckle_noise_threshold': 0.3,
+    'uniform_noise_threshold': 0.6,
+    'adaptive_filtering': True,
+    'noise_detection_enabled': True,
+    'bilateral_filter_params': {
+        'd': 5,
+        'sigma_color': 20,
+        'sigma_space': 20
+    },
+    'gaussian_filter_params': {
+        'kernel_size': (3, 3),
+        'sigma': 0.5
+    },
+    'median_filter_kernel_size': 3,
+    'wiener_filter_noise_var': 0.1,
+    'nlm_filter_params': {
+        'h': 10,
+        'template_window_size': 7,
+        'search_window_size': 21
+    }
+}
+
 # Enhanced Batch Size Configuration
 if GPU_AVAILABLE:
     GPU_BATCH_SIZE = 16  # Larger batch size for GPU

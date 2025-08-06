@@ -1,13 +1,13 @@
 {
   "process_type": "complete_train_val_test",
-  "best_model": "xgb",
-  "best_test_accuracy": 0.7818181818181819,
+  "best_model": "rf",
+  "best_test_accuracy": 0.9090909090909091,
   "dataset_splits": {
     "train_samples": 253,
     "val_samples": 55,
     "test_samples": 55,
     "total_samples": 363,
-    "feature_count": 37
+    "feature_count": 4517
   },
   "gpu_available": true,
   "gpu_name": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
