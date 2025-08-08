@@ -3,7 +3,7 @@
   "gpu_name": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
   "device": "cuda",
   "best_model": "rf",
-  "best_accuracy": 0.9604743083003953,
+  "best_accuracy": 0.9446640316205533,
   "feature_count": 4517,
   "sample_count": 253
 }
