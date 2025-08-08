@@ -60,17 +60,17 @@ class ForgeryValidator:
     def load_trained_models(self):
         """Load pre-trained models and preprocessors"""
         try:
-            # Load all models
-            with open(self.model_dir / 'train_all_models.pkl', 'rb') as f:
+            # Load all models using dataset-specific paths
+            with open(ALL_MODELS_PATH, 'rb') as f:
                 self.models = pickle.load(f)
             
             # Load scaler
-            with open(self.model_dir / 'train_scaler.pkl', 'rb') as f:
+            with open(SCALER_PATH, 'rb') as f:
                 self.scaler = pickle.load(f)
             
             # Load feature selector
             try:
-                with open(self.model_dir / 'train_feature_selector.pkl', 'rb') as f:
+                with open(FEATURE_SELECTOR_PATH, 'rb') as f:
                     self.feature_selector = pickle.load(f)
                 logger.info(" Feature selector loaded")
             except FileNotFoundError:
@@ -350,8 +350,12 @@ class ForgeryValidator:
         validation_summary = {
             'validation_time': datetime.now().isoformat(),
             'dataset_info': {
+                'active_dataset': ACTIVE_DATASET,
+                'dataset_name': CURRENT_DATASET['name'],
+                'dataset_description': CURRENT_DATASET['description'],
                 'validation_samples': features_shape[0],
-                'feature_count': features_shape[1]
+                'feature_count': features_shape[1],
+                'validation_csv': VAL_CSV
             },
             'best_model': best_model_name,
             'best_metrics': best_metrics,
@@ -363,8 +367,9 @@ class ForgeryValidator:
             }
         }
         
-        # Save detailed results
-        with open('./results/validation_results.json', 'w') as f:
+        # Save detailed results in dataset-specific directory
+        validation_results_path = os.path.join(RESULTS_DIR, 'validation_results.json')
+        with open(validation_results_path, 'w') as f:
             json.dump(validation_summary, f, indent=2, default=str)
         
         # Save model comparison CSV
@@ -382,11 +387,12 @@ class ForgeryValidator:
             })
         
         comparison_df = pd.DataFrame(comparison_data)
-        comparison_df.to_csv('./results/validation_model_comparison.csv', index=False)
+        validation_comparison_path = os.path.join(RESULTS_DIR, 'validation_model_comparison.csv')
+        comparison_df.to_csv(validation_comparison_path, index=False)
         
         logger.info(f" Validation results saved:")
-        logger.info(f"   - Detailed results: ./results/validation_results.json")
-        logger.info(f"   - Model comparison: ./results/validation_model_comparison.csv")
+        logger.info(f"   - Detailed results: {validation_results_path}")
+        logger.info(f"   - Model comparison: {validation_comparison_path}")
         
         return best_model_name, best_metrics
 
@@ -396,6 +402,9 @@ def main():
     print(" IMAGE FORGERY DETECTION - VALIDATION SET EVALUATION")
     print("=" * 80)
     
+    # Create results directory if it doesn't exist
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    
     # Initialize validator
     validator = ForgeryValidator()
     
@@ -404,12 +413,12 @@ def main():
     
     # Load validation dataset
     logger.info(" Loading validation dataset...")
-    if not os.path.exists('./data/val_labels.csv'):
-        logger.error(" Validation dataset CSV not found. Please ensure data/val_labels.csv exists.")
+    if not os.path.exists(VAL_CSV):
+        logger.error(f" Validation dataset CSV not found. Please ensure {VAL_CSV} exists.")
         return
     
     # Extract features from validation dataset
-    features, labels = validator.extract_features_from_dataset('./data/val_labels.csv', "Validation Dataset")
+    features, labels = validator.extract_features_from_dataset(VAL_CSV, "Validation Dataset")
     
     if features is None:
         logger.error(" Failed to extract features from validation dataset")
@@ -437,7 +446,7 @@ def main():
     if best_metrics['roc_auc']:
         print(f" Validation ROC AUC: {best_metrics['roc_auc']:.4f}")
     print(f" Prediction Speed: {best_metrics['predictions_per_second']:.1f} predictions/sec")
-    print(f" Results saved to: ./results/")
+    print(f" Results saved to: {RESULTS_DIR}")
     print("=" * 80)
     
     return best_metrics['accuracy']

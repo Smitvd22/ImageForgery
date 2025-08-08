@@ -66,7 +66,8 @@ class CompleteForgeryTester:
             logger.info(" Using CPU")
         
         # Setup directories
-        os.makedirs('./results', exist_ok=True)
+        results_dir = RESULTS_DIR
+        os.makedirs(results_dir, exist_ok=True)
         
         # Load trained models
         self.load_trained_models()
@@ -75,16 +76,16 @@ class CompleteForgeryTester:
         """Load pre-trained models and preprocessors"""
         try:
             # Load best model
-            with open(self.model_dir / 'train_best_model.pkl', 'rb') as f:
+            with open(BEST_MODEL_PATH, 'rb') as f:
                 self.best_model = pickle.load(f)
             
             # Load scaler
-            with open(self.model_dir / 'train_scaler.pkl', 'rb') as f:
+            with open(SCALER_PATH, 'rb') as f:
                 self.scaler = pickle.load(f)
             
             # Load feature selector
             try:
-                with open(self.model_dir / 'train_feature_selector.pkl', 'rb') as f:
+                with open(FEATURE_SELECTOR_PATH, 'rb') as f:
                     self.feature_selector = pickle.load(f)
                 logger.info(" Loaded feature selector")
             except FileNotFoundError:
@@ -93,15 +94,15 @@ class CompleteForgeryTester:
             
             # Load all models
             try:
-                with open(self.model_dir / 'train_all_models.pkl', 'rb') as f:
+                with open(ALL_MODELS_PATH, 'rb') as f:
                     self.all_models = pickle.load(f)
             except FileNotFoundError:
                 logger.warning(" All models file not found, using best model only")
                 self.all_models = {'best': self.best_model}
             
-            # Load configuration
+            # Load configuration (keep old path format for now)
             try:
-                with open(self.model_dir / 'train_config.json', 'r') as f:
+                with open(self.model_dir / f'{ACTIVE_DATASET}_config.json', 'r') as f:
                     self.config = json.load(f)
             except FileNotFoundError:
                 logger.warning(" Configuration file not found")
@@ -340,8 +341,10 @@ class CompleteForgeryTester:
         
         return metrics
     
-    def create_comprehensive_visualizations(self, results, labels, save_dir="./results"):
+    def create_comprehensive_visualizations(self, results, labels, save_dir=None):
         """Create comprehensive test visualizations"""
+        if save_dir is None:
+            save_dir = RESULTS_DIR
         logger.info(" Creating comprehensive visualizations...")
         
         # Set style
@@ -546,7 +549,7 @@ class CompleteForgeryTester:
         }
         
         # Save detailed results
-        with open('./results/test_complete_results.json', 'w') as f:
+        with open(os.path.join(RESULTS_DIR, 'test_complete_results.json'), 'w') as f:
             json.dump(detailed_results, f, indent=2, default=str)
         
         # Save simplified summary
@@ -560,7 +563,7 @@ class CompleteForgeryTester:
             'total_samples': features_shape[0]
         }
         
-        with open('./results/test_summary.json', 'w') as f:
+        with open(os.path.join(RESULTS_DIR, 'test_summary.json'), 'w') as f:
             json.dump(summary, f, indent=2)
         
         # Save predictions CSV for further analysis
@@ -576,12 +579,12 @@ class CompleteForgeryTester:
             })
         
         predictions_df = pd.DataFrame(predictions_data)
-        predictions_df.to_csv('./results/test_model_comparison.csv', index=False)
+        predictions_df.to_csv(os.path.join(RESULTS_DIR, 'test_model_comparison.csv'), index=False)
         
         logger.info(f" Test results saved:")
-        logger.info(f"   - Detailed results: ./results/test_complete_results.json")
-        logger.info(f"   - Summary: ./results/test_summary.json")
-        logger.info(f"   - Model comparison: ./results/test_model_comparison.csv")
+        logger.info(f"   - Detailed results: {os.path.join(RESULTS_DIR, 'test_complete_results.json')}")
+        logger.info(f"   - Summary: {os.path.join(RESULTS_DIR, 'test_summary.json')}")
+        logger.info(f"   - Model comparison: {os.path.join(RESULTS_DIR, 'test_model_comparison.csv')}")
         
         return best_model_name, best_metrics
 
@@ -599,12 +602,12 @@ def main():
     
     # Load test dataset
     logger.info(" Loading test dataset for evaluation...")
-    if not os.path.exists('./data/test_labels.csv'):
-        logger.error(" Test dataset CSV not found. Please ensure data/test_labels.csv exists.")
+    if not os.path.exists(TEST_CSV):
+        logger.error(f" Test dataset CSV not found. Please ensure {TEST_CSV} exists.")
         return
     
     # Extract features from test dataset only
-    features, labels = tester.extract_features_from_dataset('./data/test_labels.csv', "Test Dataset")
+    features, labels = tester.extract_features_from_dataset(TEST_CSV, "Test Dataset")
     
     if features is None:
         logger.error(" Failed to extract features from test dataset")
@@ -638,7 +641,7 @@ def main():
         print(f" Test ROC AUC: {best_metrics['roc_auc']:.4f}")
     print(f" Prediction Speed: {best_metrics['predictions_per_second']:.1f} predictions/sec")
     print(f" Total Testing Time: {total_time:.2f} seconds")
-    print(f" Results saved to: ./results/")
+    print(f" Results saved to: {RESULTS_DIR}")
     print("=" * 80)
     
     return best_metrics['accuracy']

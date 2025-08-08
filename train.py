@@ -77,7 +77,8 @@ class CompleteForgeryTrainer:
         
         # Setup directories
         os.makedirs('./models', exist_ok=True)
-        os.makedirs('./results', exist_ok=True)
+        # Create results directory
+        os.makedirs(RESULTS_DIR, exist_ok=True)
     
     def load_cnn_models(self):
         """Load pre-trained CNN models for feature extraction"""
@@ -398,8 +399,10 @@ class CompleteForgeryTrainer:
         
         return metrics
     
-    def create_visualizations(self, results, save_dir="./results"):
+    def create_visualizations(self, results, save_dir=None):
         """Create comprehensive visualizations"""
+        if save_dir is None:
+            save_dir = RESULTS_DIR
         logger.info(" Creating visualizations...")
         
         # Set style
@@ -504,19 +507,19 @@ class CompleteForgeryTrainer:
         best_metrics = results[best_model_name]
         
         # Save best model
-        with open('./models/train_best_model.pkl', 'wb') as f:
+        with open(BEST_MODEL_PATH, 'wb') as f:
             pickle.dump(best_model, f)
         
         # Save scaler
-        with open('./models/train_scaler.pkl', 'wb') as f:
+        with open(SCALER_PATH, 'wb') as f:
             pickle.dump(scaler, f)
         
         # Save feature selector
-        with open('./models/train_feature_selector.pkl', 'wb') as f:
+        with open(FEATURE_SELECTOR_PATH, 'wb') as f:
             pickle.dump(feature_selector, f)
         
         # Save all models
-        with open('./models/train_all_models.pkl', 'wb') as f:
+        with open(ALL_MODELS_PATH, 'wb') as f:
             pickle.dump(models, f)
         
         # Save detailed results
@@ -533,7 +536,8 @@ class CompleteForgeryTrainer:
             'total_training_time': time.time() - self.training_start_time
         }
         
-        with open('./results/train_complete_results.json', 'w') as f:
+        # Save comprehensive results
+        with open(os.path.join(RESULTS_DIR, 'train_complete_results.json'), 'w') as f:
             json.dump(detailed_results, f, indent=2, default=str)
         
         # Save configuration
@@ -551,10 +555,10 @@ class CompleteForgeryTrainer:
             json.dump(config, f, indent=2)
         
         logger.info(f" Results saved:")
-        logger.info(f"   - Best model: ./models/train_best_model.pkl")
-        logger.info(f"   - All models: ./models/train_all_models.pkl")
-        logger.info(f"   - Scaler: ./models/train_scaler.pkl")
-        logger.info(f"   - Results: ./results/train_complete_results.json")
+        logger.info(f"   - Best model: {BEST_MODEL_PATH}")
+        logger.info(f"   - All models: {ALL_MODELS_PATH}")
+        logger.info(f"   - Scaler: {SCALER_PATH}")
+        logger.info(f"   - Results: {os.path.join(RESULTS_DIR, 'train_complete_results.json')}")
         
         return best_model_name, best_metrics
 
@@ -572,12 +576,12 @@ def main():
     
     # Load training dataset
     logger.info(" Loading training dataset...")
-    if not os.path.exists('./data/train_labels.csv'):
-        logger.error(" Training dataset CSV not found. Please ensure data/train_labels.csv exists.")
+    if not os.path.exists(TRAIN_CSV):
+        logger.error(f" Training dataset CSV not found. Please ensure {TRAIN_CSV} exists.")
         return
     
     # Extract features from training dataset only
-    features, labels = trainer.extract_features_from_dataset('./data/train_labels.csv', "Training Dataset")
+    features, labels = trainer.extract_features_from_dataset(TRAIN_CSV, "Training Dataset")
     
     if features is None:
         logger.error(" Failed to extract features from training dataset")
@@ -617,7 +621,7 @@ def main():
         print(f" Best ROC AUC: {best_metrics['roc_auc']:.4f}")
     print(f" Total Training Time: {total_time:.2f} seconds")
     print(f" Models saved to: ./models/")
-    print(f" Results saved to: ./results/")
+    print(f" Results saved to: {RESULTS_DIR}")
     print("=" * 80)
     
     return best_metrics['accuracy']

@@ -1,21 +1,21 @@
 # Image Forgery Detection - Complete Usage Guide
 
-This comprehensive guide demonstrates how to use the complete image forgery detection system that implements all the specified requirements.
+This comprehensive guide demonstrates how to use the multi-dataset image forgery detection system with support for both 4CAM and MISD datasets.
 
 ## 🎯 Project Overview
 
 This project implements a state-of-the-art image forgery detection system with the following key components:
 
-### ✅ Implemented Requirements
+### ✅ Implemented Features
 
-1. **Input Handling** - Accepts images in various formats
-2. **Preprocessing Pipeline** - Brightness/contrast adjustment, resolution normalization, sparkle noise suppression
-3. **Multi-backbone Architecture** - ResNet++, U-Net components, frequency domain analysis
-4. **Feature Fusion** - Advanced statistical feature mapping to tabular format
-5. **XGBoost Classification** - Binary classification (authentic/forged)
-6. **Latest APIs** - PyTorch 2.x, HuggingFace transformers integration
-7. **Complete Implementation** - Training, testing, evaluation utilities
-8. **Utility Scripts** - Data preparation, model training, prediction tools
+1. **Multi-Dataset Support** - 4CAM (TIF) and MISD (JPG/BMP/PNG) datasets
+2. **Dataset Management** - Easy switching between datasets
+3. **Preprocessing Pipeline** - Advanced noise suppression and enhancement
+4. **Multi-backbone Architecture** - ResNet50, EfficientNet-B0, DenseNet121
+5. **Feature Fusion** - 4,502-dimensional feature vectors
+6. **Ensemble Learning** - Multiple ML models with stacking
+7. **Separate Results** - Dataset-specific result directories
+8. **Complete Utilities** - Training, testing, validation, and prediction
 
 ## 🚀 Quick Start
 
@@ -26,368 +26,272 @@ This project implements a state-of-the-art image forgery detection system with t
 pip install -r requirements.txt
 ```
 
-### 2. Prepare Dataset
+### 2. Dataset Management
 
 ```bash
-# Prepare dataset splits
-python prepare_data.py
+# List available datasets
+python dataset_manager.py list
 
-# Verify dataset structure
-python prepare_data.py --force
+# Switch to MISD dataset
+python dataset_manager.py switch misd
+
+# Switch to 4CAM dataset
+python dataset_manager.py switch 4cam
 ```
 
-### 3. Train Model
+### 3. Train Models
 
 ```bash
-# Train the complete model
+# Train on current active dataset
 python train.py
+
+# Or run complete pipeline for specific dataset
+python dataset_manager.py run-pipeline misd
 ```
 
 ### 4. Test System
 
 ```bash
-# Run comprehensive test suite
-python demo_pipeline.py --demo test
+# Test current active dataset
+python test.py
 
-# Run complete demonstration
-python demo_pipeline.py --demo all
+# Validate model performance
+python validate.py
 ```
 
 ### 5. Make Predictions
 
 ```bash
-# Predict single image
-python simple_predict.py data/4cam_auth/canong3_02_sub_01.tif
+# Single image prediction
+python predict_optimized.py --image "data/4cam_auth/canong3_02_sub_01.tif"
 
-# Or use the demo
-python demo_pipeline.py --demo predict --image data/4cam_auth/canong3_02_sub_01.tif
+# Batch prediction
+python predict_optimized.py --directory "data/4cam_auth/"
+
+# Specify dataset explicitly
+python predict_optimized.py --image "data/Dataset/Au/img001.jpg" --dataset misd
 ```
 
-## 📋 Detailed Component Demonstrations
+## 📁 Dataset Support
 
-### Requirement 1: Input Handling
+### 4CAM Dataset
+- **Format**: TIFF images
+- **Authentic**: 183 images in `data/4cam_auth/`
+- **Forged**: 180 images in `data/4cam_splc/`
+- **Results**: Stored in `results_4cam/`
 
-```bash
-python demo_pipeline.py --demo input
-```
-
-**What it demonstrates:**
-- Image loading from various formats (.tif, .jpg, .png)
-- Input validation and error handling
-- Batch processing capabilities
-
-### Requirement 2: Preprocessing Steps
-
-```bash
-python demo_pipeline.py --demo preprocessing
-```
-
-**What it demonstrates:**
-- Brightness and contrast adjustment (`cv2.convertScaleAbs`)
-- Resolution normalization and resizing (`cv2.resize` with LANCZOS4)
-- Custom sparkle noise suppression filter
-- Adaptive contrast enhancement (CLAHE)
-
-### Requirement 3: Multi-backbone Architecture
-
-```bash
-python demo_pipeline.py --demo architecture
-```
-
-**What it demonstrates:**
-- **ResNet++**: Enhanced ResNet152 with attention mechanisms
-- **U-Net Components**: Semantic segmentation-style features
-- **Frequency Domain Analysis**: DCT compression artifact detection
-- **Feature Fusion**: Advanced MLP-based fusion network
-
-### Requirement 4: Feature Mapping
-
-```bash
-python demo_pipeline.py --demo mapping
-```
-
-**What it demonstrates:**
-- Statistical feature extraction (mean, std, skewness, kurtosis)
-- Tabular representation creation
-- Feature normalization and scaling
-
-### Requirement 5: XGBoost Classification
-
-```bash
-python demo_pipeline.py --demo classification
-```
-
-**What it demonstrates:**
-- XGBoost classifier configuration
-- Binary classification (authentic vs forged)
-- Probability prediction and confidence scoring
-
-### Requirement 6: Technical Requirements
-
-```bash
-python demo_pipeline.py --demo technical
-```
-
-**What it demonstrates:**
-- PyTorch 2.x compatibility
-- HuggingFace transformers integration
-- CUDA/GPU acceleration support
-- Modern API usage
+### MISD Dataset
+- **Formats**: JPG, BMP, PNG images
+- **Authentic**: 1,239 images in `data/Dataset/Au/`
+- **Forged**: 606 images in `data/Dataset/Sp/`
+- **Results**: Stored in `results_misd/`
 
 ## 🔧 Advanced Usage
 
-### Training with Custom Parameters
+### Dataset Manager
 
-```python
-# Modify config.py for custom settings
-XGB_PARAMS = {
-    'n_estimators': 3000,     # More trees for better accuracy
-    'max_depth': 20,          # Deeper trees
-    'learning_rate': 0.01,    # Slower learning
-    # ... other parameters
-}
+The `dataset_manager.py` utility provides comprehensive dataset management:
 
-# Then run training
+```bash
+# List all available datasets and their status
+python dataset_manager.py list
+
+# Switch active dataset
+python dataset_manager.py switch 4cam
+python dataset_manager.py switch misd
+
+# Run complete pipeline (train + validate + test)
+python dataset_manager.py run-pipeline 4cam
+python dataset_manager.py run-pipeline misd
+```
+
+### Configuration
+
+The system uses a unified configuration in `core/config.py`:
+
+- `ACTIVE_DATASET`: Currently active dataset ('4cam' or 'misd')
+- `DATASETS`: Dataset-specific configurations
+- `RESULTS_DIR`: Automatically set based on active dataset
+
+### Model Training
+
+Train models for specific datasets:
+
+```bash
+# Train on 4CAM dataset
+python dataset_manager.py switch 4cam
+python train.py
+
+# Train on MISD dataset
+python dataset_manager.py switch misd
 python train.py
 ```
 
-### Model Evaluation
+Training process:
+1. Feature extraction using CNN backbones
+2. Preprocessing and feature selection
+3. Training multiple ML models
+4. Model validation and selection
+5. Results saved to dataset-specific directory
+
+### Model Testing
+
+Comprehensive testing with detailed metrics:
 
 ```bash
-# Comprehensive model evaluation
-python evaluate_model.py
+# Test current active dataset
+python test.py
+
+# The test script will:
+# - Load the appropriate model for active dataset
+# - Evaluate on test set
+# - Generate confusion matrix
+# - Save results to results_[dataset]/
 ```
 
-This provides:
-- Test set accuracy metrics
-- Cross-validation results
-- Feature importance analysis
-- ROC curves and confusion matrices
+### Model Validation
 
-### Custom Prediction Pipeline
-
-```python
-from simple_predict import predict_image
-from config import *
-
-# Predict single image
-result = predict_image("path/to/your/image.jpg")
-
-# Batch prediction example
-import os
-from pathlib import Path
-
-image_dir = Path("path/to/images")
-for img_path in image_dir.glob("*.jpg"):
-    result = predict_image(str(img_path))
-    print(f"{img_path.name}: {result}")
-```
-
-## 📊 Architecture Details
-
-### Multi-backbone Feature Extraction
-
-```
-Input Image (384x384x3)
-    ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    Multi-backbone Architecture               │
-├─────────────────┬─────────────────┬─────────────────────────┤
-│   ResNet++      │  Forgery CNN    │  Frequency Analyzer     │
-│   (Global)      │  (Specialized)  │  (DCT/Artifacts)        │
-│   2048×3 dims   │  128×2×4 dims   │  256 dims               │
-└─────────────────┴─────────────────┴─────────────────────────┘
-    ↓
-Feature Fusion Network (MLP)
-    ↓
-Statistical Feature Enhancement
-    ↓
-Tabular Features (140 dimensions)
-    ↓
-XGBoost Classifier
-    ↓
-Prediction: Authentic (0) or Forged (1)
-```
-
-### Preprocessing Pipeline
-
-```
-Raw Image
-    ↓
-Brightness/Contrast Adjustment (α=1.3, β=15)
-    ↓
-CLAHE Enhancement (clip_limit=2.5)
-    ↓
-Sparkle Noise Suppression (Multi-scale morphology)
-    ↓
-Resolution Normalization (LANCZOS4 interpolation)
-    ↓
-Final Size: 384×384×3
-```
-
-## 🎯 Performance Targets
-
-- **Target Accuracy**: 90%+
-- **Current Performance**: ~72% (Cross-validation baseline)
-- **Feature Dimensions**: 140 (after statistical enhancement)
-- **Training Time**: ~8 minutes (feature extraction + XGBoost)
-
-## 🔍 Testing and Validation
-
-### Comprehensive Test Suite
+Cross-validation for robust model evaluation:
 
 ```bash
-python test_system.py
+# Validate current active dataset
+python validate.py
+
+# The validation script will:
+# - Perform stratified k-fold cross-validation
+# - Compare multiple models
+# - Generate performance plots
+# - Save validation results
 ```
 
-Tests all 8 requirements:
-1. Input handling capabilities
-2. Preprocessing step functionality
-3. Model architecture components
-4. Feature mapping accuracy
-5. XGBoost classification performance
-6. Technical requirement compliance
-7. Code implementation completeness
-8. Utility script availability
+### Prediction System
 
-### Individual Component Testing
+The prediction system supports both datasets automatically:
 
 ```bash
-# Test specific components
-python demo_pipeline.py --demo input           # Test input handling
-python demo_pipeline.py --demo preprocessing   # Test preprocessing
-python demo_pipeline.py --demo architecture    # Test model architecture
+# Single image prediction
+python predict_optimized.py --image "path/to/image.jpg"
+
+# Batch prediction on directory
+python predict_optimized.py --directory "path/to/images/"
+
+# Force specific dataset
+python predict_optimized.py --image "image.jpg" --dataset 4cam
+
+# Get confidence scores
+python predict_optimized.py --image "image.jpg" --confidence
 ```
 
-## 📁 Project Structure
+## 📊 Results and Outputs
 
-```
-ImageForgery/
-├── config.py              # Configuration settings
-├── models.py               # Multi-backbone architecture
-├── dataset.py              # Data loading utilities
-├── preprocessing.py        # Image preprocessing pipeline
-├── classifier.py           # XGBoost classifier
-├── train.py               # Training pipeline
-├── simple_predict.py      # Single image prediction
-├── evaluate_model.py      # Model evaluation tools
-├── test_system.py         # Comprehensive test suite
-├── demo_pipeline.py       # Complete demonstration
-├── prepare_data.py        # Dataset preparation
-├── requirements.txt       # Dependencies
-├── README.md              # Project overview
-├── USAGE_GUIDE.md         # This guide
-└── data/                  # Dataset directory
-    ├── 4cam_auth/         # Authentic images
-    ├── 4cam_splc/         # Forged images
-    ├── labels.csv         # Full dataset labels
-    ├── train_labels.csv   # Training set
-    ├── val_labels.csv     # Validation set
-    └── test_labels.csv    # Test set
-```
+### Result Directories
 
-## ⚡ Performance Optimization
+Results are automatically organized by dataset:
 
-### GPU Acceleration
+- `results_4cam/`: All 4CAM dataset results
+- `results_misd/`: All MISD dataset results
+
+### Generated Files
+
+Each result directory contains:
+
+- `model_comparison.csv`: Performance comparison of all models
+- `confusion_matrix_best_model.png`: Confusion matrix visualization
+- `roc_curve.png`: ROC curve analysis
+- `feature_importance.png`: Feature importance plots
+- `[dataset]_results.json`: Detailed results in JSON format
+
+### Model Files
+
+Trained models are saved with dataset prefixes:
+
+- `models/4cam_best_model.pkl`: Best 4CAM model
+- `models/4cam_scaler.pkl`: 4CAM feature scaler
+- `models/4cam_feature_selector.pkl`: 4CAM feature selector
+- `models/misd_best_model.pkl`: Best MISD model
+- `models/misd_scaler.pkl`: MISD feature scaler
+- `models/misd_feature_selector.pkl`: MISD feature selector
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Dataset not found**
+   ```bash
+   # Verify dataset structure
+   python dataset_manager.py list
+   ```
+
+2. **Model not trained**
+   ```bash
+   # Train model for current dataset
+   python train.py
+   ```
+
+3. **Wrong dataset active**
+   ```bash
+   # Check current dataset
+   python dataset_manager.py list
+   
+   # Switch if needed
+   python dataset_manager.py switch [dataset_name]
+   ```
+
+### Performance Tips
+
+1. **GPU Acceleration**: The system automatically detects and uses GPU if available
+2. **Batch Processing**: Use directory prediction for multiple images
+3. **Memory Management**: Large batches are processed in chunks
+
+### Debugging
+
+Enable verbose output by modifying `core/config.py`:
 
 ```python
-# Automatic GPU detection in config.py
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Mixed precision training (if CUDA available)
-MIXED_PRECISION = torch.cuda.is_available()
+VERBOSE = True
+DEBUG = True
 ```
 
-### Memory Optimization
+## 📈 Model Performance
 
-```python
-# Adjust batch size based on GPU memory
-BATCH_SIZE = 8  # Reduce if out of memory
-NUM_WORKERS = 6 if torch.cuda.is_available() else 3
-PIN_MEMORY = torch.cuda.is_available()
-```
+### Expected Accuracy
 
-## 🛠️ Customization
+- **4CAM Dataset**: ~80-90% accuracy
+- **MISD Dataset**: ~85-95% accuracy
 
-### Adding New Backbone Models
+### Feature Information
 
-```python
-# In models.py
-class YourCustomBackbone(nn.Module):
-    def __init__(self):
-        super().__init__()
-        # Your implementation
-        
-    def forward(self, x):
-        # Your forward pass
-        return features
+- **Total Features**: 4,502 (before selection)
+- **Selected Features**: 200 (after variance filtering and selection)
+- **CNN Backbones**: ResNet50 (2048), EfficientNet-B0 (1280), DenseNet121 (1024)
 
-# In ImprovedMultiModelExtractor
-self.your_backbone = YourCustomBackbone()
-```
+### Model Types
 
-### Custom Preprocessing
+The system trains multiple models:
+- Extra Trees Classifier
+- Random Forest
+- XGBoost
+- Gradient Boosting
+- MLP Classifier
+- Stacking Ensemble
 
-```python
-# In preprocessing.py
-def your_custom_filter(img):
-    # Your custom preprocessing
-    return processed_img
+## 🎯 Best Practices
 
-# Add to preprocess_image function
-processed = your_custom_filter(processed)
-```
-
-## 📝 Logging and Monitoring
-
-All components include comprehensive logging:
-
-```python
-import logging
-logger = logging.getLogger(__name__)
-
-# Training logs saved to: improved_training.log
-# Test logs saved to: test_system.log
-# Evaluation logs saved to: model_evaluation.log
-```
-
-## 🎉 Success Validation
-
-To verify complete implementation:
-
-```bash
-# Run full system test
-python demo_pipeline.py --demo all
-
-# Check specific requirements
-python test_system.py
-
-# Verify model performance
-python evaluate_model.py
-```
-
-Expected output:
-```
-✅ ALL TESTS PASSED! Your implementation meets all requirements.
-```
+1. **Always switch dataset before training**: Use `dataset_manager.py switch [dataset]`
+2. **Check active dataset**: Use `dataset_manager.py list`
+3. **Use appropriate image formats**: TIF for 4CAM, JPG/BMP/PNG for MISD
+4. **Monitor results**: Check dataset-specific result directories
+5. **Validate regularly**: Run validation after training new models
 
 ## 📞 Support
 
 For issues or questions:
-1. Check the test system output: `python test_system.py`
-2. Review logs in `*.log` files
-3. Verify dataset structure with `python prepare_data.py`
-4. Ensure all dependencies are installed: `pip install -r requirements.txt`
 
-## 🏆 Achievement Summary
+1. Check this usage guide
+2. Verify dataset and model files exist
+3. Ensure correct dataset is active
+4. Check error messages in terminal output
 
-This implementation successfully delivers:
+---
 
-- ✅ **Complete Pipeline**: Input → Preprocessing → Feature Extraction → Classification
-- ✅ **State-of-the-art Architecture**: Multi-backbone with attention mechanisms
-- ✅ **Production Ready**: Comprehensive testing, logging, and error handling
-- ✅ **Extensible Design**: Easy to add new components and customize
-- ✅ **Performance Optimized**: GPU acceleration, mixed precision, efficient data loading
-- ✅ **Well Documented**: Clear code comments, usage examples, and guides
-
-Your image forgery detection system is now ready for production use! 🚀
+**System Status**: ✅ Production-ready with multi-dataset support

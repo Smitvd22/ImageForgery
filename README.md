@@ -24,32 +24,50 @@ A high-performance image forgery detection system with **90.91% accuracy** using
 
 ### 1. Setup Environment
 ```bash
-# Check and install dependencies
-python setup.py
-
-# Or manually install
 pip install -r requirements.txt
 ```
 
-### 2. Train Model
+### 2. Train Models
 ```bash
-# GPU-optimized training (automatic CPU fallback)
-python train_optimized.py
+# Train on 4CAM dataset (default)
+python train.py
+
+# Switch to MISD dataset and train
+python dataset_manager.py switch misd
+python train.py
 ```
 
-### 3. Make Predictions
+### 3. Test Models
 ```bash
-# Single image
-python predict_optimized.py data/4cam_auth/canong3_02_sub_01.tif
+# Test current active dataset
+python test.py
 
-# Batch processing
-python predict_optimized.py data/4cam_auth/ --output results.json
+# Or run complete pipeline
+python dataset_manager.py run-pipeline misd
+```
 
-# Complete testing
-python test_optimized_complete.py
+### 4. Make Predictions
+```bash
+# Single image prediction
+python predict_optimized.py --image "path/to/image.jpg"
 
-# Test noise suppression capabilities
-python demo_noise_suppression.py data/4cam_auth/canong3_02_sub_01.tif
+# Batch prediction
+python predict_optimized.py --directory "path/to/images/"
+
+# Specify dataset explicitly
+python predict_optimized.py --image "image.jpg" --dataset 4cam
+```
+
+### 5. Dataset Management
+```bash
+# List available datasets
+python dataset_manager.py list
+
+# Switch active dataset
+python dataset_manager.py switch 4cam
+
+# Run complete pipeline for specific dataset
+python dataset_manager.py run-pipeline misd
 ```
 
 ## 📊 Model Performance
@@ -87,43 +105,46 @@ python demo_noise_suppression.py data/4cam_auth/canong3_02_sub_01.tif
 
 ```
 ImageForgery/
-├── 🚀 train_optimized.py        # GPU-optimized training (90.91% accuracy)
-├── 🔮 predict_optimized.py      # GPU-optimized prediction
-├── 🧪 test_optimized_complete.py # Complete testing suite
-├── 🛠️ setup.py                 # Environment setup script
-├── 📋 requirements.txt          # Dependencies
-├── 📋 requirements_gpu.txt      # GPU-specific dependencies
-├── 🚫 .gitignore              # Git ignore rules
+├── 🚀 train.py                     # Multi-dataset training system
+├── 🔮 predict_optimized.py         # Multi-dataset prediction system  
+├── 🧪 test.py                      # Testing and evaluation
+├── ✅ validate.py                  # Model validation
+├── 🎛️ dataset_manager.py           # Dataset switching and management
+├── 📋 requirements.txt             # Dependencies
+├── 🚫 .gitignore                   # Git ignore rules
 │
-├── core/                      # Core modules
-│   ├── config.py              # Configuration settings
-│   ├── models.py              # CNN model architectures
-│   ├── dataset.py             # Data loading utilities
-│   ├── classifier.py          # ML classifiers
-│   ├── preprocessing.py       # Image preprocessing
+├── core/                           # Core modules
+│   ├── config.py                   # Unified configuration system
+│   ├── models.py                   # CNN model architectures
+│   ├── dataset.py                  # Multi-dataset loading utilities
 │   └── __init__.py
 │
-├── data/                      # Dataset
-│   ├── train_labels.csv       # Training labels
-│   ├── val_labels.csv         # Validation labels 
-│   ├── test_labels.csv        # Test labels
-│   ├── 4cam_auth/             # Authentic images (183)
-│   └── 4cam_splc/             # Forged images (180)
+├── data/                           # Datasets
+│   ├── 4cam_auth/                  # 4CAM authentic images (183)
+│   ├── 4cam_splc/                  # 4CAM forged images (180)
+│   ├── Dataset/                    # MISD dataset
+│   │   ├── Au/                     # MISD authentic images (1,239)
+│   │   └── Sp/                     # MISD forged images (606)
+│   ├── *_labels.csv                # Dataset-specific labels
+│   ├── *_train_labels.csv          # Training splits
+│   ├── *_val_labels.csv           # Validation splits
+│   └── *_test_labels.csv          # Test splits
 │
-├── models/                    # Trained models & results
-│   ├── optimized_best_model.pkl    # Primary model (90.91%)
-│   ├── optimized_scaler.pkl        # Feature scaler
-│   ├── complete_dataset_*.json/png # Latest evaluation results
+├── models/                         # Trained models (dataset-specific)
+│   ├── 4cam_best_model.pkl         # 4CAM trained model
+│   ├── 4cam_scaler.pkl            # 4CAM feature scaler
+│   ├── 4cam_feature_selector.pkl  # 4CAM feature selector
+│   ├── misd_best_model.pkl         # MISD trained model
+│   ├── misd_scaler.pkl            # MISD feature scaler
+│   ├── misd_feature_selector.pkl  # MISD feature selector
 │   └── README.md                   # Model documentation
 │
-├── utils/                     # Utilities
-│   ├── evaluate.py            # Model evaluation functions
-│   ├── test_system.py         # System validation
-│   └── __init__.py
+├── results_4cam/                   # 4CAM results and visualizations
+├── results_misd/                   # MISD results and visualizations
 │
-└── docs/                      # Documentation
-    ├── USAGE_GUIDE.md         # Detailed usage guide
-    └── README.md              # Additional documentation
+└── docs/                          # Documentation
+    ├── USAGE_GUIDE.md             # Detailed usage guide
+    └── README.md                  # Additional documentation
 ```
 
 ## 🔧 Technical Details

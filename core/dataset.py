@@ -36,33 +36,62 @@ class ForgeryDataset(Dataset):
         """Create dataset DataFrame from directory structure"""
         data = []
         
+        # Get file extensions for current dataset
+        file_extensions = CURRENT_DATASET["file_extensions"]
+        
         # Process authentic images
         if authentic_dir and os.path.exists(authentic_dir):
-            authentic_files = glob.glob(os.path.join(authentic_dir, "*.tif")) + \
-                             glob.glob(os.path.join(authentic_dir, "*.jpg")) + \
-                             glob.glob(os.path.join(authentic_dir, "*.png"))
+            authentic_files = []
+            for ext in file_extensions:
+                authentic_files.extend(glob.glob(os.path.join(authentic_dir, ext)))
             
             for file_path in authentic_files:
+                # Extract category from filename
+                filename = os.path.basename(file_path)
+                category = 'authentic'
+                
+                # Handle different dataset naming conventions
+                if ACTIVE_DATASET == "misd" and filename.startswith('Au_'):
+                    # Extract category from MISD naming convention: Au_category_index.jpg
+                    parts = filename.split('_')
+                    if len(parts) >= 2:
+                        category = f"authentic_{parts[1]}"  # e.g., authentic_ani, authentic_art
+                elif ACTIVE_DATASET == "4cam":
+                    # Extract category from 4cam naming convention if needed
+                    category = 'authentic_4cam'
+                
                 data.append({
-                    'filename': os.path.basename(file_path),
+                    'filename': filename,
                     'filepath': file_path,
                     'label': 0,  # 0 for authentic
-                    'category': 'authentic'
+                    'category': category
                 })
             logger.info(f"Found {len(authentic_files)} authentic images")
         
         # Process forged images
         if forged_dir and os.path.exists(forged_dir):
-            forged_files = glob.glob(os.path.join(forged_dir, "*.tif")) + \
-                          glob.glob(os.path.join(forged_dir, "*.jpg")) + \
-                          glob.glob(os.path.join(forged_dir, "*.png"))
+            forged_files = []
+            for ext in file_extensions:
+                forged_files.extend(glob.glob(os.path.join(forged_dir, ext)))
             
             for file_path in forged_files:
+                # Extract information from filename
+                filename = os.path.basename(file_path)
+                category = 'forged'
+                
+                # Handle different dataset naming conventions
+                if ACTIVE_DATASET == "misd" and filename.startswith('Sp_D_'):
+                    # MISD spliced images: Sp_D_source_target_..._id.jpg
+                    category = 'multiple_spliced'
+                elif ACTIVE_DATASET == "4cam":
+                    # 4cam forged images
+                    category = 'forged_4cam'
+                
                 data.append({
-                    'filename': os.path.basename(file_path),
+                    'filename': filename,
                     'filepath': file_path,
                     'label': 1,  # 1 for forged
-                    'category': 'forged'
+                    'category': category
                 })
             logger.info(f"Found {len(forged_files)} forged images")
         
@@ -225,7 +254,10 @@ def verify_dataset():
     """
     Verify that the dataset directories exist and contain images
     """
-    logger.info("Verifying dataset...")
+    logger.info(f"Verifying {ACTIVE_DATASET.upper()} dataset...")
+    
+    # Print current dataset info
+    print_dataset_info()
     
     # Check directories
     if not os.path.exists(AUTHENTIC_DIR):
@@ -236,9 +268,15 @@ def verify_dataset():
         logger.error(f"Forged directory not found: {FORGED_DIR}")
         return False
     
-    # Count files
-    auth_files = len(glob.glob(os.path.join(AUTHENTIC_DIR, "*.tif")))
-    forged_files = len(glob.glob(os.path.join(FORGED_DIR, "*.tif")))
+    # Count files using current dataset extensions
+    file_extensions = CURRENT_DATASET["file_extensions"]
+    
+    auth_files = 0
+    forged_files = 0
+    
+    for ext in file_extensions:
+        auth_files += len(glob.glob(os.path.join(AUTHENTIC_DIR, ext)))
+        forged_files += len(glob.glob(os.path.join(FORGED_DIR, ext)))
     
     logger.info(f"Found {auth_files} authentic images")
     logger.info(f"Found {forged_files} forged images")

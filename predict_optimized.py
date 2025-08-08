@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 🚀 Optimized Image Forgery Detection Prediction
-GPU-accelerated with CPU fallback, simplified and clean
+GPU-accelerated with CPU fallback, supports both 4CAM and MISD datasets
 """
 import os
 import sys
@@ -24,38 +24,49 @@ logger = logging.getLogger(__name__)
 from core.config import *
 
 class OptimizedPredictor:
-    """Optimized predictor with automatic GPU/CPU handling"""
+    """Optimized predictor with automatic GPU/CPU handling and dataset support"""
     
-    def __init__(self):
+    def __init__(self, dataset=None):
         self.device = DEVICE
         self.gpu_available = GPU_AVAILABLE
         self.gpu_name = GPU_NAME
         
+        # Determine which dataset to use
+        if dataset is None:
+            self.dataset = ACTIVE_DATASET.lower()
+        else:
+            self.dataset = dataset.lower()
+        
         # Model components
         self.model = None
         self.scaler = None
+        self.feature_selector = None
         self.loaded_models = {}
         self.config = None
         
         logger.info(f"🎮 Device: {self.device}")
+        logger.info(f"📊 Dataset: {self.dataset.upper()}")
         if self.gpu_available:
             logger.info(f"🚀 GPU: {self.gpu_name}")
     
     def load_models(self):
-        """Load trained models and components"""
+        """Load trained models and components for the specific dataset"""
         try:
-            # Load best model (try complete first, then optimized)
-            model_path = './models/complete_best_model.pkl'
-            if not os.path.exists(model_path):
-                model_path = './models/optimized_best_model.pkl'
+            # Use dataset-specific model paths
+            model_prefix = f"{self.dataset}_"
+            
+            # Load best model
+            model_path = os.path.join(MODELS_DIR, f"{model_prefix}best_model.pkl")
             
             if os.path.exists(model_path):
                 with open(model_path, 'rb') as f:
                     self.model = pickle.load(f)
-                logger.info("✅ Best model loaded")
+                logger.info(f"✅ Best model loaded for {self.dataset.upper()}: {model_path}")
             else:
-                # Fallback to other models
+                # Fallback to legacy model paths
                 fallback_paths = [
+                    './models/complete_best_model.pkl',
+                    './models/optimized_best_model.pkl',
                     './models/gpu_windows_best_model.pkl',
                     './models/best_model.pkl'
                 ]
@@ -67,21 +78,21 @@ class OptimizedPredictor:
                         break
             
             if self.model is None:
-                logger.error("❌ No trained model found")
+                logger.error(f"❌ No trained model found for {self.dataset.upper()} dataset")
                 return False
             
-            # Load scaler (try complete first, then optimized)
-            scaler_path = './models/complete_scaler.pkl'
-            if not os.path.exists(scaler_path):
-                scaler_path = './models/optimized_scaler.pkl'
+            # Load scaler
+            scaler_path = os.path.join(MODELS_DIR, f"{model_prefix}scaler.pkl")
             
             if os.path.exists(scaler_path):
                 with open(scaler_path, 'rb') as f:
                     self.scaler = pickle.load(f)
-                logger.info("✅ Scaler loaded")
+                logger.info(f"✅ Scaler loaded for {self.dataset.upper()}")
             else:
                 # Fallback scaler
                 fallback_scalers = [
+                    './models/complete_scaler.pkl',
+                    './models/optimized_scaler.pkl',
                     './models/gpu_windows_scaler.pkl',
                     './models/preprocessors.pkl'
                 ]
@@ -92,10 +103,25 @@ class OptimizedPredictor:
                         logger.info(f"✅ Fallback scaler loaded: {path}")
                         break
             
-            # Load configuration (try complete first, then optimized)
-            config_path = './models/complete_config.json'
+            # Load feature selector if available
+            feature_selector_path = os.path.join(MODELS_DIR, f"{model_prefix}feature_selector.pkl")
+            if os.path.exists(feature_selector_path):
+                with open(feature_selector_path, 'rb') as f:
+                    self.feature_selector = pickle.load(f)
+                logger.info(f"✅ Feature selector loaded for {self.dataset.upper()}")
+            
+            # Load configuration
+            config_path = os.path.join(MODELS_DIR, f"{model_prefix}config.json")
             if not os.path.exists(config_path):
-                config_path = './models/optimized_config.json'
+                # Fallback config paths
+                fallback_configs = [
+                    './models/complete_config.json',
+                    './models/optimized_config.json'
+                ]
+                for path in fallback_configs:
+                    if os.path.exists(path):
+                        config_path = path
+                        break
             
             if os.path.exists(config_path):
                 with open(config_path, 'r') as f:
@@ -221,6 +247,10 @@ class OptimizedPredictor:
             if features is None:
                 return None, None
             
+            # Apply feature selection first if available
+            if self.feature_selector is not None:
+                features = self.feature_selector.transform(features)
+            
             # Scale features if scaler is available
             if self.scaler is not None:
                 features = self.scaler.transform(features)
@@ -232,7 +262,7 @@ class OptimizedPredictor:
             probability = None
             if hasattr(self.model, 'predict_proba'):
                 prob = self.model.predict_proba(features)[0]
-                probability = prob[1]  # Probability of being forged
+                probability = prob[1] if len(prob) > 1 else prob[0]  # Probability of being forged
             
             return prediction, probability
             
@@ -245,15 +275,32 @@ class OptimizedPredictor:
         from pathlib import Path
         
         image_dir = Path(image_dir)
-        image_extensions = ['.tif', '.jpg', '.jpeg', '.png', '.bmp']
+        
+        # Get file extensions based on current dataset
+        current_dataset_config = DATASETS.get(self.dataset, {})
+        dataset_extensions = current_dataset_config.get('file_extensions', ['*.jpg', '*.png', '*.tif', '*.bmp'])
+        
+        # Convert to list of extensions for glob
+        image_extensions = []
+        for ext in dataset_extensions:
+            # Remove the * from the beginning
+            clean_ext = ext.replace('*', '')
+            image_extensions.append(clean_ext)
+            image_extensions.append(clean_ext.upper())
+        
+        logger.info(f"📂 Looking for extensions: {image_extensions}")
         
         results = []
         
         # Find all image files
         image_files = []
         for ext in image_extensions:
-            image_files.extend(image_dir.glob(f'*{ext}'))
-            image_files.extend(image_dir.glob(f'*{ext.upper()}'))
+            pattern = f'*{ext}'
+            found_files = list(image_dir.glob(pattern))
+            image_files.extend(found_files)
+        
+        # Remove duplicates
+        image_files = list(set(image_files))
         
         logger.info(f"📂 Found {len(image_files)} images")
         
@@ -266,7 +313,8 @@ class OptimizedPredictor:
                     'path': str(image_path),
                     'prediction': 'Forged' if prediction == 1 else 'Authentic',
                     'label': int(prediction),
-                    'confidence': probability if probability is not None else 0.5
+                    'confidence': probability if probability is not None else 0.5,
+                    'dataset': self.dataset.upper()
                 }
                 results.append(result)
                 
@@ -277,26 +325,62 @@ class OptimizedPredictor:
 
 def main():
     """Main prediction function"""
-    parser = argparse.ArgumentParser(description='Image Forgery Detection Prediction')
-    parser.add_argument('input', help='Image file or directory path')
+    parser = argparse.ArgumentParser(description='Image Forgery Detection Prediction - Multi-Dataset Support')
+    parser.add_argument('input', nargs='?', help='Image file or directory path')
+    parser.add_argument('--dataset', '-d', choices=['4cam', 'misd'], 
+                       help='Dataset to use (4cam or misd). If not specified, uses current active dataset')
     parser.add_argument('--output', '-o', help='Output JSON file for batch results')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+    parser.add_argument('--list-datasets', action='store_true', help='List available datasets and exit')
     
     args = parser.parse_args()
     
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
+    # Handle list datasets option
+    if args.list_datasets:
+        print("=" * 60)
+        print("📊 AVAILABLE DATASETS")
+        print("=" * 60)
+        for key, dataset_info in DATASETS.items():
+            status = "✅ Available" if (os.path.exists(dataset_info["authentic_dir"]) and 
+                                     os.path.exists(dataset_info["forged_dir"])) else "❌ Not Found"
+            model_path = os.path.join(MODELS_DIR, f"{key}_best_model.pkl")
+            model_status = "✅ Model Available" if os.path.exists(model_path) else "❌ Model Missing"
+            
+            print(f"\n{key.upper()} Dataset:")
+            print(f"  Name: {dataset_info['name']}")
+            print(f"  Description: {dataset_info['description']}")
+            print(f"  Data Status: {status}")
+            print(f"  Model Status: {model_status}")
+        
+        current_dataset = ACTIVE_DATASET
+        print(f"\n🎯 Current Active Dataset: {current_dataset.upper()}")
+        print("=" * 60)
+        return
+    
+    # Check if input is provided when not listing datasets
+    if not args.input:
+        parser.error("Input path is required unless using --list-datasets")
+    
     print("=" * 60)
     print("🚀 OPTIMIZED IMAGE FORGERY DETECTION")
     print("=" * 60)
     
+    # Determine which dataset to use
+    dataset_to_use = args.dataset if args.dataset else None
+    
     # Initialize predictor
-    predictor = OptimizedPredictor()
+    predictor = OptimizedPredictor(dataset=dataset_to_use)
     
     # Load models
     if not predictor.load_models():
-        print("❌ Failed to load models. Please train first with train_optimized.py")
+        print(f"❌ Failed to load models for {predictor.dataset.upper()} dataset.")
+        print("💡 Available options:")
+        print("  1. Train the model first using: python train.py")
+        print("  2. Switch dataset using: python dataset_manager.py --switch <dataset>")
+        print("  3. List available datasets: python predict_optimized.py --list-datasets")
         return
     
     input_path = Path(args.input)
@@ -312,7 +396,8 @@ def main():
             confidence = probability if probability is not None else 0.5
             
             print(f"\n🎯 RESULT:")
-            print(f"📷 Image: {input_path.name}")
+            print(f"� Dataset: {predictor.dataset.upper()}")
+            print(f"�📷 Image: {input_path.name}")
             print(f"🔍 Prediction: {result}")
             print(f"📊 Confidence: {confidence:.3f}")
             
@@ -322,6 +407,12 @@ def main():
                 print("⚠️ Medium confidence")
             else:
                 print("❓ Low confidence")
+                
+            # Additional interpretation
+            if result == 'Forged':
+                print("🔴 The image appears to be FORGED/MANIPULATED")
+            else:
+                print("🟢 The image appears to be AUTHENTIC/ORIGINAL")
         else:
             print("❌ Failed to process image")
     
@@ -339,7 +430,8 @@ def main():
             avg_confidence = sum(r['confidence'] for r in results) / total
             
             print(f"\n📊 BATCH RESULTS:")
-            print(f"📷 Total Images: {total}")
+            print(f"� Dataset: {predictor.dataset.upper()}")
+            print(f"�📷 Total Images: {total}")
             print(f"🔴 Forged: {forged} ({forged/total*100:.1f}%)")
             print(f"🟢 Authentic: {authentic} ({authentic/total*100:.1f}%)")
             print(f"📊 Average Confidence: {avg_confidence:.3f}")
@@ -347,8 +439,19 @@ def main():
             # Save results if output specified
             if args.output:
                 import json
+                batch_summary = {
+                    'dataset': predictor.dataset.upper(),
+                    'summary': {
+                        'total_images': total,
+                        'forged_count': forged,
+                        'authentic_count': authentic,
+                        'forged_percentage': forged/total*100,
+                        'average_confidence': avg_confidence
+                    },
+                    'predictions': results
+                }
                 with open(args.output, 'w') as f:
-                    json.dump(results, f, indent=2)
+                    json.dump(batch_summary, f, indent=2)
                 print(f"💾 Results saved to {args.output}")
         else:
             print("❌ No images processed successfully")

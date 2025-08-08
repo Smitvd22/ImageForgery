@@ -63,7 +63,8 @@ desktop.ini
 
 # Project outputs
 # ---------------
-results/
+results_4cam/
+results_misd/
 outputs/
 predictions/
 *.backup

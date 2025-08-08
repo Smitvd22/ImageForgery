@@ -22,16 +22,53 @@ if GPU_AVAILABLE:
     torch.backends.cudnn.deterministic = False
     torch.backends.cudnn.enabled = True
 
+# Dataset Selection Configuration
+# Change this to switch between datasets: "4cam" or "misd"
+ACTIVE_DATASET = "misd"  # Options: "4cam", "misd"
+
 # Dataset Configuration
 DATA_ROOT = "./data"
-AUTHENTIC_DIR = os.path.join(DATA_ROOT, "4cam_auth")
-FORGED_DIR = os.path.join(DATA_ROOT, "4cam_splc")
 
-# Generated CSV files for training/testing
-DATA_CSV = os.path.join(DATA_ROOT, "labels.csv")
-TRAIN_CSV = os.path.join(DATA_ROOT, "train_labels.csv")
-VAL_CSV = os.path.join(DATA_ROOT, "val_labels.csv")
-TEST_CSV = os.path.join(DATA_ROOT, "test_labels.csv")
+# Dataset configurations
+DATASETS = {
+    "4cam": {
+        "name": "4CAM Dataset",
+        "authentic_dir": os.path.join(DATA_ROOT, "4cam_auth"),
+        "forged_dir": os.path.join(DATA_ROOT, "4cam_splc"),
+        "file_extensions": ["*.tif"],
+        "description": "Original 4CAM camera dataset with TIF images",
+        "results_dir": "./results_4cam"
+    },
+    "misd": {
+        "name": "MISD Dataset", 
+        "authentic_dir": os.path.join(DATA_ROOT, "Dataset", "Au"),
+        "forged_dir": os.path.join(DATA_ROOT, "Dataset", "Sp"),
+        "file_extensions": ["*.jpg", "*.JPG", "*.bmp", "*.png"],
+        "description": "Multiple Image Splicing Dataset with JPG/BMP images",
+        "results_dir": "./results_misd"
+    }
+}
+
+# Active dataset paths (automatically set based on ACTIVE_DATASET)
+CURRENT_DATASET = DATASETS[ACTIVE_DATASET]
+AUTHENTIC_DIR = CURRENT_DATASET["authentic_dir"]
+FORGED_DIR = CURRENT_DATASET["forged_dir"]
+
+# Generated CSV files for training/testing (dataset-specific)
+DATASET_PREFIX = f"{ACTIVE_DATASET}_"
+DATA_CSV = os.path.join(DATA_ROOT, f"{DATASET_PREFIX}labels.csv")
+TRAIN_CSV = os.path.join(DATA_ROOT, f"{DATASET_PREFIX}train_labels.csv")
+VAL_CSV = os.path.join(DATA_ROOT, f"{DATASET_PREFIX}val_labels.csv")
+TEST_CSV = os.path.join(DATA_ROOT, f"{DATASET_PREFIX}test_labels.csv")
+
+# Model and results paths (dataset-specific)
+MODELS_DIR = "./models"
+RESULTS_DIR = f"./results_{ACTIVE_DATASET}"  # Dataset-specific results directory
+MODEL_PREFIX = f"{ACTIVE_DATASET}_"
+BEST_MODEL_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}best_model.pkl")
+ALL_MODELS_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}all_models.pkl")
+SCALER_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}scaler.pkl")
+FEATURE_SELECTOR_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}feature_selector.pkl")
 
 # Enhanced Model Configuration for Maximum Performance
 BATCH_SIZE = 8  # Optimized for stability
@@ -381,6 +418,57 @@ if torch.cuda.is_available():
 
 # Logging Configuration
 LOG_LEVEL = "INFO"
+
+# Dataset utility functions
+def get_dataset_info():
+    """Get information about the currently active dataset"""
+    return {
+        "active": ACTIVE_DATASET,
+        "name": CURRENT_DATASET["name"],
+        "description": CURRENT_DATASET["description"],
+        "authentic_dir": AUTHENTIC_DIR,
+        "forged_dir": FORGED_DIR,
+        "file_extensions": CURRENT_DATASET["file_extensions"],
+        "csv_files": {
+            "data": DATA_CSV,
+            "train": TRAIN_CSV,
+            "val": VAL_CSV,
+            "test": TEST_CSV
+        },
+        "model_files": {
+            "best_model": BEST_MODEL_PATH,
+            "all_models": ALL_MODELS_PATH,
+            "scaler": SCALER_PATH,
+            "feature_selector": FEATURE_SELECTOR_PATH
+        }
+    }
+
+def print_dataset_info():
+    """Print current dataset configuration"""
+    info = get_dataset_info()
+    print("="*60)
+    print("CURRENT DATASET CONFIGURATION")
+    print("="*60)
+    print(f"Active Dataset: {info['active'].upper()}")
+    print(f"Name: {info['name']}")
+    print(f"Description: {info['description']}")
+    print(f"Authentic Images: {info['authentic_dir']}")
+    print(f"Forged Images: {info['forged_dir']}")
+    print(f"File Extensions: {', '.join(info['file_extensions'])}")
+    print(f"Results Directory: {RESULTS_DIR}")
+    print("\nGenerated Files:")
+    print(f"  Labels CSV: {info['csv_files']['data']}")
+    print(f"  Train CSV: {info['csv_files']['train']}")
+    print(f"  Validation CSV: {info['csv_files']['val']}")
+    print(f"  Test CSV: {info['csv_files']['test']}")
+    print("\nModel Files:")
+    print(f"  Best Model: {info['model_files']['best_model']}")
+    print(f"  All Models: {info['model_files']['all_models']}")
+    print("="*60)
+
+# Print current configuration on import
+if __name__ != "__main__":
+    print_dataset_info()
 LOG_FILE = "ultra_enhanced_training.log"
 TENSORBOARD_LOG_DIR = "./logs/ultra_enhanced"
 
