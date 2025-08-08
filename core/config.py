@@ -182,40 +182,40 @@ USE_CUTMIX = True
 USE_AUTOAUGMENT = True
 
 # Maximum Performance XGBoost Configuration
+# Balanced XGBoost Configuration for Better Generalization
 XGB_PARAMS = {
     'objective': 'binary:logistic',
     'eval_metric': ['logloss', 'auc', 'error'],
     
-    # Model complexity - optimized for maximum accuracy
-    'n_estimators': 5000,  # Significantly increased
-    'max_depth': 20,       # Deeper trees
-    'learning_rate': 0.01, # Lower learning rate
-    'subsample': 0.9,
-    'colsample_bytree': 0.9,
-    'colsample_bylevel': 0.9,
-    'colsample_bynode': 0.9,
+    # Model complexity - very conservative for small dataset
+    'n_estimators': 50,    # Much smaller for small dataset
+    'max_depth': 3,        # Very shallow to prevent overfitting  
+    'learning_rate': 0.1,  # Increased from 0.01 for faster, more stable learning
+    'subsample': 0.8,      # Added randomness for better generalization
+    'colsample_bytree': 0.8,
+    'colsample_bylevel': 0.8,
+    'colsample_bynode': 0.8,
     
     # GPU Configuration
     'tree_method': 'gpu_hist' if GPU_AVAILABLE else 'hist',
     'gpu_id': 0 if GPU_AVAILABLE else None,
     
-    # Regularization
-    'min_child_weight': 5,
-    'gamma': 0.05,
-    'reg_alpha': 0.01,
-    'reg_lambda': 0.05,
+    # Regularization - increased for better generalization
+    'min_child_weight': 5,   # Increased for more regularization
+    'gamma': 0.2,          # Increased regularization
+    'reg_alpha': 0.2,      # Increased L1 regularization  
+    'reg_lambda': 2.0,     # Increased L2 regularization
     
     # Performance
     'scale_pos_weight': 1,
-    'max_delta_step': 2,
-    'min_split_loss': 0.05,
+    'max_delta_step': 1,
+    'min_split_loss': 0.1,
     'random_state': RANDOM_SEED,
     'n_jobs': -1,
     'verbosity': 1,
-    'tree_method': 'hist',
     'enable_categorical': False,
-    'early_stopping_rounds': 100,
-    'validation_fraction': 0.1,
+    'early_stopping_rounds': None,  # Removed - causing issues without validation
+    'validation_fraction': None,   # Removed - not used in training
 }
 
 # Ensemble Configuration
@@ -398,7 +398,7 @@ TARGET_RECALL = 0.95
 TARGET_F1_SCORE = 0.95
 TARGET_AUC = 0.98
 
-print(f"🚀 Ultra-Enhanced configuration loaded successfully!")
+print("Ultra-Enhanced configuration loaded successfully!")
 print(f"Using device: {DEVICE}")
 print(f"Target accuracy: {TARGET_ACCURACY:.1%}")
 print(f"Enhanced image size: {IMAGE_SIZE}")

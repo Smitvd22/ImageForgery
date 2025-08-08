@@ -1,7 +1,7 @@
 {
   "process_type": "complete_train_val_test",
-  "best_model": "rf",
-  "best_test_accuracy": 0.9090909090909091,
+  "best_model": "xgb",
+  "best_test_accuracy": 0.8363636363636363,
   "dataset_splits": {
     "train_samples": 253,
     "val_samples": 55,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🚀 Image Forgery Detection Training on Complete Dataset
+ Image Forgery Detection Training on Complete Dataset
 GPU-accelerated training with comprehensive evaluation and visualization
 """
 
@@ -43,7 +43,7 @@ try:
     XGB_AVAILABLE = True
 except ImportError:
     XGB_AVAILABLE = False
-    print("⚠️ XGBoost not available. Install with: pip install xgboost")
+    print(" XGBoost not available. Install with: pip install xgboost")
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -68,12 +68,12 @@ class CompleteForgeryTrainer:
         self.results = {}
         self.training_start_time = time.time()
         
-        logger.info(f"🎮 Device: {self.device}")
+        logger.info(f" Device: {self.device}")
         if self.gpu_available:
-            logger.info(f"🚀 GPU: {self.gpu_name}")
-            logger.info(f"📊 GPU Memory: {GPU_MEMORY:.1f} GB")
+            logger.info(f" GPU: {self.gpu_name}")
+            logger.info(f" GPU Memory: {GPU_MEMORY:.1f} GB")
         else:
-            logger.info("💻 Using CPU")
+            logger.info(" Using CPU")
         
         # Setup directories
         os.makedirs('./models', exist_ok=True)
@@ -83,7 +83,7 @@ class CompleteForgeryTrainer:
         """Load pre-trained CNN models for feature extraction"""
         try:
             if not TIMM_AVAILABLE:
-                logger.warning("⚠️ TIMM not available for advanced models")
+                logger.warning(" TIMM not available for advanced models")
                 return False
             
             self.cnn_models = {}
@@ -96,22 +96,22 @@ class CompleteForgeryTrainer:
                 model.eval()
                 self.cnn_models[model_name] = model
             
-            logger.info(f"✅ Loaded {len(self.cnn_models)} CNN models")
+            logger.info(f" Loaded {len(self.cnn_models)} CNN models")
             return True
         except Exception as e:
-            logger.error(f"❌ Error loading CNN models: {e}")
+            logger.error(f" Error loading CNN models: {e}")
             return False
     
     def extract_features_from_dataset(self, csv_path, dataset_name="Dataset"):
         """Extract comprehensive features from complete dataset"""
-        logger.info(f"🔧 Extracting features from {dataset_name}...")
+        logger.info(f" Extracting features from {dataset_name}...")
         
         # Load dataset
         df = pd.read_csv(csv_path)
         image_paths = df['filepath'].values
         labels = df['label'].values
         
-        logger.info(f"📊 {dataset_name} size: {len(image_paths)} images")
+        logger.info(f" {dataset_name} size: {len(image_paths)} images")
         
         # Transform for CNN models
         transform = T.Compose([
@@ -159,7 +159,7 @@ class CompleteForgeryTrainer:
                     processing_times.append(time.time() - start_time)
                     
                 except Exception as e:
-                    logger.warning(f"⚠️ Error processing {img_path}: {e}")
+                    logger.warning(f" Error processing {img_path}: {e}")
                     continue
         
         if all_features:
@@ -167,12 +167,12 @@ class CompleteForgeryTrainer:
             labels_array = np.array(valid_labels)
             avg_processing_time = np.mean(processing_times)
             
-            logger.info(f"✅ Extracted {features_array.shape[0]} samples with {features_array.shape[1]} features")
-            logger.info(f"⏱️ Average processing time: {avg_processing_time:.3f}s per image")
+            logger.info(f" Extracted {features_array.shape[0]} samples with {features_array.shape[1]} features")
+            logger.info(f" Average processing time: {avg_processing_time:.3f}s per image")
             
             return features_array, labels_array
         else:
-            logger.error(f"❌ No features extracted from {dataset_name}")
+            logger.error(f" No features extracted from {dataset_name}")
             return None, None
     
     def extract_basic_features(self, image):
@@ -216,82 +216,119 @@ class CompleteForgeryTrainer:
         return features
     
     def train_models(self, features, labels):
-        """Train multiple models with comprehensive evaluation"""
-        logger.info("🎯 Training models...")
+        """Train multiple models with comprehensive evaluation and feature selection"""
+        logger.info(" Training models...")
+        
+        # Feature selection to reduce overfitting
+        from sklearn.feature_selection import SelectKBest, f_classif
+        
+        # Select top 100 features (much less than 4517) to reduce overfitting
+        logger.info("Selecting top 100 features to reduce overfitting...")
+        feature_selector = SelectKBest(score_func=f_classif, k=min(100, features.shape[1]))
+        features_selected = feature_selector.fit_transform(features, labels)
+        
+        logger.info(f"Reduced features from {features.shape[1]} to {features_selected.shape[1]}")
         
         # Feature scaling
         scaler = StandardScaler()
-        features_scaled = scaler.fit_transform(features)
+        features_scaled = scaler.fit_transform(features_selected)
         
         models = {}
         results = {}
         training_times = {}
         
-        # Random Forest
+        # Random Forest - with MUCH stronger regularization for small dataset
         logger.info("Training Random Forest...")
-        rf = RandomForestClassifier(n_estimators=300, max_depth=20, random_state=42, n_jobs=-1)
+        rf = RandomForestClassifier(
+            n_estimators=20,     # Very small for small dataset
+            max_depth=3,         # Very shallow to prevent overfitting
+            min_samples_split=20, # Much higher to prevent overfitting
+            min_samples_leaf=10,  # Much higher to prevent overfitting
+            max_features='sqrt', # Use sqrt for better generalization
+            class_weight='balanced',  # Handle class imbalance
+            random_state=42, 
+            n_jobs=-1
+        )
         start_time = time.time()
         rf.fit(features_scaled, labels)
         training_times['rf'] = time.time() - start_time
         models['rf'] = rf
-        logger.info(f"✅ Random Forest trained in {training_times['rf']:.2f}s")
+        logger.info(f" Random Forest trained in {training_times['rf']:.2f}s")
         
-        # Extra Trees
+        # Extra Trees - with MUCH stronger regularization
         logger.info("Training Extra Trees...")
-        et = ExtraTreesClassifier(n_estimators=300, max_depth=20, random_state=42, n_jobs=-1)
+        et = ExtraTreesClassifier(
+            n_estimators=20,     # Very small for small dataset
+            max_depth=3,         # Very shallow to prevent overfitting
+            min_samples_split=20, # Much higher to prevent overfitting
+            min_samples_leaf=10,  # Much higher to prevent overfitting
+            max_features='sqrt', # Use sqrt for better generalization
+            class_weight='balanced',  # Handle class imbalance
+            random_state=42, 
+            n_jobs=-1
+        )
         start_time = time.time()
         et.fit(features_scaled, labels)
         training_times['et'] = time.time() - start_time
         models['et'] = et
-        logger.info(f"✅ Extra Trees trained in {training_times['et']:.2f}s")
+        logger.info(f" Extra Trees trained in {training_times['et']:.2f}s")
         
-        # XGBoost with GPU if available
+        # XGBoost with better parameters from config
         if XGB_AVAILABLE:
             logger.info("Training XGBoost...")
+            # Use very conservative parameters for small dataset
             xgb_params = {
-                'n_estimators': 500,
-                'max_depth': 10,
+                'objective': 'binary:logistic',
+                'n_estimators': 20,      # Very small
+                'max_depth': 2,          # Very shallow
                 'learning_rate': 0.1,
-                'subsample': 0.8,
-                'colsample_bytree': 0.8,
+                'subsample': 0.7,        # More randomness
+                'colsample_bytree': 0.7,
+                'min_child_weight': 10,  # Strong regularization
+                'gamma': 0.5,           # Strong regularization
+                'reg_alpha': 0.5,       # Strong L1
+                'reg_lambda': 5.0,      # Very strong L2
                 'random_state': 42,
-                'n_jobs': -1
+                'scale_pos_weight': 1
             }
             
             # Add GPU support if available
             if self.gpu_available:
                 xgb_params['tree_method'] = 'gpu_hist'
                 xgb_params['gpu_id'] = 0
-                logger.info("🚀 XGBoost GPU enabled")
+                logger.info(" XGBoost GPU enabled")
             
             xgb_model = xgb.XGBClassifier(**xgb_params)
             start_time = time.time()
             xgb_model.fit(features_scaled, labels)
             training_times['xgb'] = time.time() - start_time
             models['xgb'] = xgb_model
-            logger.info(f"✅ XGBoost trained in {training_times['xgb']:.2f}s")
+            logger.info(f" XGBoost trained in {training_times['xgb']:.2f}s")
         
-        # MLP with GPU optimization
+        # MLP with very strong regularization for small dataset
         logger.info("Training MLP...")
         mlp = MLPClassifier(
-            hidden_layer_sizes=(512, 256, 128) if self.gpu_available else (256, 128),
-            max_iter=1000,
+            hidden_layer_sizes=(64,),  # Single small hidden layer
+            max_iter=200,        # Reduced iterations
             random_state=42,
             early_stopping=True,
-            validation_fraction=0.1,
-            alpha=0.001
+            validation_fraction=0.3,  # Larger validation for early stopping
+            n_iter_no_change=20,      # Stop if no improvement
+            alpha=0.5,               # Very strong L2 regularization
+            learning_rate_init=0.001,
+            solver='adam'
         )
         start_time = time.time()
         mlp.fit(features_scaled, labels)
         training_times['mlp'] = time.time() - start_time
         models['mlp'] = mlp
-        logger.info(f"✅ MLP trained in {training_times['mlp']:.2f}s")
+        logger.info(f" MLP trained in {training_times['mlp']:.2f}s")
         
-        return models, scaler, training_times
+        return models, scaler, training_times, feature_selector
     
     def evaluate_models(self, models, scaler, features, labels):
         """Comprehensive model evaluation with cross-validation"""
-        logger.info("📊 Evaluating models...")
+        logger.info(" Evaluating models...")
         
         features_scaled = scaler.transform(features)
         results = {}
@@ -317,7 +354,7 @@ class CompleteForgeryTrainer:
             
             results[name] = metrics
             
-            logger.info(f"✅ {name.upper()}: Acc={metrics['accuracy']:.4f} F1={metrics['f1_score']:.4f} CV-Acc={metrics['cv_accuracy_mean']:.4f}±{metrics['cv_accuracy_std']:.4f}")
+            logger.info(f" {name.upper()}: Acc={metrics['accuracy']:.4f} F1={metrics['f1_score']:.4f} CV-Acc={metrics['cv_accuracy_mean']:.4f}{metrics['cv_accuracy_std']:.4f}")
         
         return results
     
@@ -363,7 +400,7 @@ class CompleteForgeryTrainer:
     
     def create_visualizations(self, results, save_dir="./results"):
         """Create comprehensive visualizations"""
-        logger.info("📊 Creating visualizations...")
+        logger.info(" Creating visualizations...")
         
         # Set style
         plt.style.use('default')
@@ -448,18 +485,18 @@ class CompleteForgeryTrainer:
         
         # Add value labels
         for i, (mean, std) in enumerate(zip(cv_means, cv_stds)):
-            plt.text(i, mean + std + 0.01, f'{mean:.3f}±{std:.3f}', 
+            plt.text(i, mean + std + 0.01, f'{mean:.3f}{std:.3f}', 
                     ha='center', va='bottom', fontweight='bold')
         
         plt.tight_layout()
         plt.savefig(f"{save_dir}/cross_validation_results.png", dpi=300, bbox_inches='tight')
         plt.show()
         
-        logger.info(f"✅ Visualizations saved to {save_dir}/")
+        logger.info(f" Visualizations saved to {save_dir}/")
     
-    def save_results(self, models, scaler, results, training_times, features_shape):
+    def save_results(self, models, scaler, feature_selector, results, training_times, features_shape):
         """Save all models and results"""
-        logger.info("💾 Saving results...")
+        logger.info(" Saving results...")
         
         # Find best model
         best_model_name = max(results.keys(), key=lambda x: results[x]['accuracy'])
@@ -473,6 +510,10 @@ class CompleteForgeryTrainer:
         # Save scaler
         with open('./models/train_scaler.pkl', 'wb') as f:
             pickle.dump(scaler, f)
+        
+        # Save feature selector
+        with open('./models/train_feature_selector.pkl', 'wb') as f:
+            pickle.dump(feature_selector, f)
         
         # Save all models
         with open('./models/train_all_models.pkl', 'wb') as f:
@@ -509,7 +550,7 @@ class CompleteForgeryTrainer:
         with open('./models/train_config.json', 'w') as f:
             json.dump(config, f, indent=2)
         
-        logger.info(f"✅ Results saved:")
+        logger.info(f" Results saved:")
         logger.info(f"   - Best model: ./models/train_best_model.pkl")
         logger.info(f"   - All models: ./models/train_all_models.pkl")
         logger.info(f"   - Scaler: ./models/train_scaler.pkl")
@@ -520,7 +561,7 @@ class CompleteForgeryTrainer:
 def main():
     """Main training function"""
     print("=" * 80)
-    print("🚀 IMAGE FORGERY DETECTION - COMPLETE DATASET TRAINING")
+    print(" IMAGE FORGERY DETECTION - TRAINING DATASET TRAINING")
     print("=" * 80)
     
     # Initialize trainer
@@ -529,51 +570,54 @@ def main():
     # Load CNN models
     trainer.load_cnn_models()
     
-    # Load complete dataset
-    logger.info("📂 Loading complete dataset...")
-    if not os.path.exists('./data/labels.csv'):
-        logger.error("❌ Complete dataset CSV not found. Please ensure data/labels.csv exists.")
+    # Load training dataset
+    logger.info(" Loading training dataset...")
+    if not os.path.exists('./data/train_labels.csv'):
+        logger.error(" Training dataset CSV not found. Please ensure data/train_labels.csv exists.")
         return
     
-    # Extract features from complete dataset
-    features, labels = trainer.extract_features_from_dataset('./data/labels.csv', "Complete Dataset")
+    # Extract features from training dataset only
+    features, labels = trainer.extract_features_from_dataset('./data/train_labels.csv', "Training Dataset")
     
     if features is None:
-        logger.error("❌ Failed to extract features from complete dataset")
+        logger.error(" Failed to extract features from training dataset")
         return
     
     # Train models
-    models, scaler, training_times = trainer.train_models(features, labels)
+    models, scaler, training_times, feature_selector = trainer.train_models(features, labels)
+    
+    # Apply feature selection to evaluation features
+    features_selected = feature_selector.transform(features)
     
     # Evaluate models
-    results = trainer.evaluate_models(models, scaler, features, labels)
+    results = trainer.evaluate_models(models, scaler, features_selected, labels)
     
     # Create visualizations
     trainer.create_visualizations(results)
     
     # Save results
-    best_model_name, best_metrics = trainer.save_results(models, scaler, results, training_times, features.shape)
+    best_model_name, best_metrics = trainer.save_results(models, scaler, feature_selector, results, training_times, features.shape)
     
     # Print final summary
     total_time = time.time() - trainer.training_start_time
     
     print("\n" + "=" * 80)
-    print("🎉 COMPLETE DATASET TRAINING FINISHED!")
+    print(" TRAINING DATASET TRAINING FINISHED!")
     print("=" * 80)
-    print(f"🎮 Device: {trainer.device}")
-    print(f"🚀 GPU Used: {'✅ Yes (' + trainer.gpu_name + ')' if trainer.gpu_available else '❌ No'}")
-    print(f"📊 Dataset Size: {features.shape[0]} samples")
-    print(f"🔧 Features: {features.shape[1]}")
-    print(f"🏆 Best Model: {best_model_name.upper()}")
-    print(f"📊 Best Accuracy: {best_metrics['accuracy']:.4f} ({best_metrics['accuracy']*100:.2f}%)")
-    print(f"📊 Best F1-Score: {best_metrics['f1_score']:.4f}")
-    print(f"📊 Best Precision: {best_metrics['precision']:.4f}")
-    print(f"📊 Best Recall: {best_metrics['recall']:.4f}")
+    print(f" Device: {trainer.device}")
+    print(f" GPU Used: {' Yes (' + trainer.gpu_name + ')' if trainer.gpu_available else ' No'}")
+    print(f" Training Dataset Size: {features.shape[0]} samples")
+    print(f" Features: {features.shape[1]}")
+    print(f" Best Model: {best_model_name.upper()}")
+    print(f" Best Accuracy: {best_metrics['accuracy']:.4f} ({best_metrics['accuracy']*100:.2f}%)")
+    print(f" Best F1-Score: {best_metrics['f1_score']:.4f}")
+    print(f" Best Precision: {best_metrics['precision']:.4f}")
+    print(f" Best Recall: {best_metrics['recall']:.4f}")
     if best_metrics['roc_auc']:
-        print(f"📊 Best ROC AUC: {best_metrics['roc_auc']:.4f}")
-    print(f"⏱️ Total Training Time: {total_time:.2f} seconds")
-    print(f"💾 Models saved to: ./models/")
-    print(f"📊 Results saved to: ./results/")
+        print(f" Best ROC AUC: {best_metrics['roc_auc']:.4f}")
+    print(f" Total Training Time: {total_time:.2f} seconds")
+    print(f" Models saved to: ./models/")
+    print(f" Results saved to: ./results/")
     print("=" * 80)
     
     return best_metrics['accuracy']

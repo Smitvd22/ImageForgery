@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🚀 Image Forgery Detection Testing on Complete Dataset
+ Image Forgery Detection Testing on Complete Dataset
 GPU-accelerated testing with comprehensive evaluation and visualization
 """
 
@@ -58,12 +58,12 @@ class CompleteForgeryTester:
         self.results = {}
         self.testing_start_time = time.time()
         
-        logger.info(f"🎮 Device: {self.device}")
+        logger.info(f" Device: {self.device}")
         if self.gpu_available:
-            logger.info(f"🚀 GPU: {self.gpu_name}")
-            logger.info(f"📊 GPU Memory: {GPU_MEMORY:.1f} GB")
+            logger.info(f" GPU: {self.gpu_name}")
+            logger.info(f" GPU Memory: {GPU_MEMORY:.1f} GB")
         else:
-            logger.info("💻 Using CPU")
+            logger.info(" Using CPU")
         
         # Setup directories
         os.makedirs('./results', exist_ok=True)
@@ -82,12 +82,21 @@ class CompleteForgeryTester:
             with open(self.model_dir / 'train_scaler.pkl', 'rb') as f:
                 self.scaler = pickle.load(f)
             
+            # Load feature selector
+            try:
+                with open(self.model_dir / 'train_feature_selector.pkl', 'rb') as f:
+                    self.feature_selector = pickle.load(f)
+                logger.info(" Loaded feature selector")
+            except FileNotFoundError:
+                logger.warning(" Feature selector not found, using all features")
+                self.feature_selector = None
+            
             # Load all models
             try:
                 with open(self.model_dir / 'train_all_models.pkl', 'rb') as f:
                     self.all_models = pickle.load(f)
             except FileNotFoundError:
-                logger.warning("⚠️ All models file not found, using best model only")
+                logger.warning(" All models file not found, using best model only")
                 self.all_models = {'best': self.best_model}
             
             # Load configuration
@@ -95,13 +104,13 @@ class CompleteForgeryTester:
                 with open(self.model_dir / 'train_config.json', 'r') as f:
                     self.config = json.load(f)
             except FileNotFoundError:
-                logger.warning("⚠️ Configuration file not found")
+                logger.warning(" Configuration file not found")
                 self.config = {}
             
-            logger.info(f"✅ Loaded {len(self.all_models)} trained models")
+            logger.info(f" Loaded {len(self.all_models)} trained models")
             
         except FileNotFoundError as e:
-            logger.error(f"❌ Required model files not found: {e}")
+            logger.error(f" Required model files not found: {e}")
             logger.error("Please run train.py first to train the models")
             sys.exit(1)
     
@@ -109,7 +118,7 @@ class CompleteForgeryTester:
         """Load CNN models for feature extraction (matching training)"""
         try:
             if not TIMM_AVAILABLE:
-                logger.warning("⚠️ TIMM not available for advanced models")
+                logger.warning(" TIMM not available for advanced models")
                 return False
             
             self.cnn_models = {}
@@ -122,22 +131,22 @@ class CompleteForgeryTester:
                 model.eval()
                 self.cnn_models[model_name] = model
             
-            logger.info(f"✅ Loaded {len(self.cnn_models)} CNN models")
+            logger.info(f" Loaded {len(self.cnn_models)} CNN models")
             return True
         except Exception as e:
-            logger.error(f"❌ Error loading CNN models: {e}")
+            logger.error(f" Error loading CNN models: {e}")
             return False
     
     def extract_features_from_dataset(self, csv_path, dataset_name="Dataset"):
         """Extract comprehensive features from complete dataset (matching training exactly)"""
-        logger.info(f"🔧 Extracting features from {dataset_name}...")
+        logger.info(f" Extracting features from {dataset_name}...")
         
         # Load dataset
         df = pd.read_csv(csv_path)
         image_paths = df['filepath'].values
         labels = df['label'].values
         
-        logger.info(f"📊 {dataset_name} size: {len(image_paths)} images")
+        logger.info(f" {dataset_name} size: {len(image_paths)} images")
         
         # Transform for CNN models (exactly matching training)
         transform = T.Compose([
@@ -185,7 +194,7 @@ class CompleteForgeryTester:
                     processing_times.append(time.time() - start_time)
                     
                 except Exception as e:
-                    logger.warning(f"⚠️ Error processing {img_path}: {e}")
+                    logger.warning(f" Error processing {img_path}: {e}")
                     continue
         
         if all_features:
@@ -193,12 +202,12 @@ class CompleteForgeryTester:
             labels_array = np.array(valid_labels)
             avg_processing_time = np.mean(processing_times)
             
-            logger.info(f"✅ Extracted {features_array.shape[0]} samples with {features_array.shape[1]} features")
-            logger.info(f"⏱️ Average processing time: {avg_processing_time:.3f}s per image")
+            logger.info(f" Extracted {features_array.shape[0]} samples with {features_array.shape[1]} features")
+            logger.info(f" Average processing time: {avg_processing_time:.3f}s per image")
             
             return features_array, labels_array
         else:
-            logger.error(f"❌ No features extracted from {dataset_name}")
+            logger.error(f" No features extracted from {dataset_name}")
             return None, None
     
     def extract_basic_features(self, image):
@@ -243,10 +252,17 @@ class CompleteForgeryTester:
     
     def test_models(self, features, labels):
         """Test all models with comprehensive evaluation"""
-        logger.info("🧪 Testing models...")
+        logger.info(" Testing models...")
         
+        # Apply feature selection if available
+        if self.feature_selector is not None:
+            features_selected = self.feature_selector.transform(features)
+            logger.info(f"Applied feature selection: {features.shape[1]} -> {features_selected.shape[1]} features")
+        else:
+            features_selected = features
+            
         # Scale features using the training scaler
-        features_scaled = self.scaler.transform(features)
+        features_scaled = self.scaler.transform(features_selected)
         
         results = {}
         
@@ -271,7 +287,7 @@ class CompleteForgeryTester:
             
             results[name] = metrics
             
-            logger.info(f"✅ {name.upper()}: Acc={metrics['accuracy']:.4f} F1={metrics['f1_score']:.4f} Prec={metrics['precision']:.4f} Rec={metrics['recall']:.4f}")
+            logger.info(f" {name.upper()}: Acc={metrics['accuracy']:.4f} F1={metrics['f1_score']:.4f} Prec={metrics['precision']:.4f} Rec={metrics['recall']:.4f}")
         
         return results
     
@@ -326,7 +342,7 @@ class CompleteForgeryTester:
     
     def create_comprehensive_visualizations(self, results, labels, save_dir="./results"):
         """Create comprehensive test visualizations"""
-        logger.info("📊 Creating comprehensive visualizations...")
+        logger.info(" Creating comprehensive visualizations...")
         
         # Set style
         plt.style.use('default')
@@ -501,11 +517,11 @@ class CompleteForgeryTester:
         plt.savefig(f"{save_dir}/test_dataset_analysis.png", dpi=300, bbox_inches='tight')
         plt.show()
         
-        logger.info(f"✅ Comprehensive visualizations saved to {save_dir}/")
+        logger.info(f" Comprehensive visualizations saved to {save_dir}/")
     
     def save_test_results(self, results, features_shape):
         """Save comprehensive test results"""
-        logger.info("💾 Saving test results...")
+        logger.info(" Saving test results...")
         
         # Find best model
         best_model_name = max(results.keys(), key=lambda x: results[x]['accuracy'])
@@ -562,7 +578,7 @@ class CompleteForgeryTester:
         predictions_df = pd.DataFrame(predictions_data)
         predictions_df.to_csv('./results/test_model_comparison.csv', index=False)
         
-        logger.info(f"✅ Test results saved:")
+        logger.info(f" Test results saved:")
         logger.info(f"   - Detailed results: ./results/test_complete_results.json")
         logger.info(f"   - Summary: ./results/test_summary.json")
         logger.info(f"   - Model comparison: ./results/test_model_comparison.csv")
@@ -572,7 +588,7 @@ class CompleteForgeryTester:
 def main():
     """Main testing function"""
     print("=" * 80)
-    print("🧪 IMAGE FORGERY DETECTION - COMPLETE DATASET TESTING")
+    print(" IMAGE FORGERY DETECTION - TEST DATASET EVALUATION")
     print("=" * 80)
     
     # Initialize tester
@@ -581,17 +597,17 @@ def main():
     # Load CNN models for feature extraction
     tester.load_cnn_models()
     
-    # Load complete dataset
-    logger.info("📂 Loading complete dataset for testing...")
-    if not os.path.exists('./data/labels.csv'):
-        logger.error("❌ Complete dataset CSV not found. Please ensure data/labels.csv exists.")
+    # Load test dataset
+    logger.info(" Loading test dataset for evaluation...")
+    if not os.path.exists('./data/test_labels.csv'):
+        logger.error(" Test dataset CSV not found. Please ensure data/test_labels.csv exists.")
         return
     
-    # Extract features from complete dataset
-    features, labels = tester.extract_features_from_dataset('./data/labels.csv', "Complete Test Dataset")
+    # Extract features from test dataset only
+    features, labels = tester.extract_features_from_dataset('./data/test_labels.csv', "Test Dataset")
     
     if features is None:
-        logger.error("❌ Failed to extract features from complete dataset")
+        logger.error(" Failed to extract features from test dataset")
         return
     
     # Test models
@@ -607,22 +623,22 @@ def main():
     total_time = time.time() - tester.testing_start_time
     
     print("\n" + "=" * 80)
-    print("🎉 COMPLETE DATASET TESTING FINISHED!")
+    print(" TEST DATASET EVALUATION FINISHED!")
     print("=" * 80)
-    print(f"🎮 Device: {tester.device}")
-    print(f"🚀 GPU Used: {'✅ Yes (' + tester.gpu_name + ')' if tester.gpu_available else '❌ No'}")
-    print(f"📊 Test Dataset Size: {features.shape[0]} samples")
-    print(f"🔧 Features: {features.shape[1]}")
-    print(f"🏆 Best Model: {best_model_name.upper()}")
-    print(f"📊 Test Accuracy: {best_metrics['accuracy']:.4f} ({best_metrics['accuracy']*100:.2f}%)")
-    print(f"📊 Test F1-Score: {best_metrics['f1_score']:.4f}")
-    print(f"📊 Test Precision: {best_metrics['precision']:.4f}")
-    print(f"📊 Test Recall: {best_metrics['recall']:.4f}")
+    print(f" Device: {tester.device}")
+    print(f" GPU Used: {' Yes (' + tester.gpu_name + ')' if tester.gpu_available else ' No'}")
+    print(f" Test Dataset Size: {features.shape[0]} samples")
+    print(f" Features: {features.shape[1]}")
+    print(f" Best Model: {best_model_name.upper()}")
+    print(f" Test Accuracy: {best_metrics['accuracy']:.4f} ({best_metrics['accuracy']*100:.2f}%)")
+    print(f" Test F1-Score: {best_metrics['f1_score']:.4f}")
+    print(f" Test Precision: {best_metrics['precision']:.4f}")
+    print(f" Test Recall: {best_metrics['recall']:.4f}")
     if best_metrics['roc_auc']:
-        print(f"📊 Test ROC AUC: {best_metrics['roc_auc']:.4f}")
-    print(f"⚡ Prediction Speed: {best_metrics['predictions_per_second']:.1f} predictions/sec")
-    print(f"⏱️ Total Testing Time: {total_time:.2f} seconds")
-    print(f"📊 Results saved to: ./results/")
+        print(f" Test ROC AUC: {best_metrics['roc_auc']:.4f}")
+    print(f" Prediction Speed: {best_metrics['predictions_per_second']:.1f} predictions/sec")
+    print(f" Total Testing Time: {total_time:.2f} seconds")
+    print(f" Results saved to: ./results/")
     print("=" * 80)
     
     return best_metrics['accuracy']

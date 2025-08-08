@@ -16,19 +16,19 @@ warnings.filterwarnings('ignore')
 try:
     import timm
     TIMM_AVAILABLE = True
-    print("✅ TIMM available for state-of-the-art models")
+    print("TIMM available for state-of-the-art models")
 except ImportError:
     TIMM_AVAILABLE = False
-    print("❌ TIMM not available. Install with: pip install timm")
+    print("TIMM not available. Install with: pip install timm")
 
 # Optional HuggingFace import with error handling
 try:
     from transformers import AutoModel, AutoImageProcessor, AutoConfig
     HF_AVAILABLE = True
-    print("✅ HuggingFace transformers available")
+    print("HuggingFace transformers available")
 except ImportError:
     HF_AVAILABLE = False
-    print("❌ HuggingFace transformers not available")
+    print("HuggingFace transformers not available")
 
 class UltraEnhancedImageNetBackbone(nn.Module):
     """
@@ -764,4 +764,4 @@ class UNetDecoder(nn.Module):
 UltraImprovedMultiModelExtractor = UltraComprehensiveMultiBackboneExtractor
 ImprovedMultiModelExtractor = UltraComprehensiveMultiBackboneExtractor
 
-print("✅ Ultra-Enhanced Models loaded successfully!")
+print("Ultra-Enhanced Models loaded successfully!")

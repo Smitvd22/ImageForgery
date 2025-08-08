@@ -573,4 +573,4 @@ class UltraEnhancedXGBoostClassifier:
 # Alias for backward compatibility
 XGBoostClassifier = UltraEnhancedXGBoostClassifier
 
-print("✅ Ultra-Enhanced XGBoost Classifier loaded successfully!")
+print("Ultra-Enhanced XGBoost Classifier loaded successfully!")
