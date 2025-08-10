@@ -35,6 +35,10 @@ python train.py
 # Switch to MISD dataset and train
 python dataset_manager.py switch misd
 python train.py
+
+# Switch to ImSplice dataset and train
+python dataset_manager.py switch imslice
+python train.py
 ```
 
 ### 3. Test Models
@@ -44,6 +48,7 @@ python test.py
 
 # Or run complete pipeline
 python dataset_manager.py run-pipeline misd
+python dataset_manager.py run-pipeline imslice
 ```
 
 ### 4. Make Predictions
@@ -56,6 +61,7 @@ python predict_optimized.py --directory "path/to/images/"
 
 # Specify dataset explicitly
 python predict_optimized.py --image "image.jpg" --dataset 4cam
+python predict_optimized.py --image "image.jpg" --dataset imslice
 ```
 
 ### 5. Dataset Management
@@ -65,9 +71,12 @@ python dataset_manager.py list
 
 # Switch active dataset
 python dataset_manager.py switch 4cam
+python dataset_manager.py switch misd
+python dataset_manager.py switch imslice
 
 # Run complete pipeline for specific dataset
 python dataset_manager.py run-pipeline misd
+python dataset_manager.py run-pipeline imslice
 ```
 
 ## 📊 Model Performance

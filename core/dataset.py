@@ -39,6 +39,10 @@ class ForgeryDataset(Dataset):
         # Get file extensions for current dataset
         file_extensions = CURRENT_DATASET["file_extensions"]
         
+        # Handle ImSpliceDataset special structure
+        if ACTIVE_DATASET == "imslice" and CURRENT_DATASET.get("use_subdirectories", False):
+            return self._create_imslice_dataset(authentic_dir, file_extensions)
+        
         # Process authentic images
         if authentic_dir and os.path.exists(authentic_dir):
             authentic_files = []
@@ -94,6 +98,65 @@ class ForgeryDataset(Dataset):
                     'category': category
                 })
             logger.info(f"Found {len(forged_files)} forged images")
+        
+        return pd.DataFrame(data)
+
+    def _create_imslice_dataset(self, base_dir, file_extensions):
+        """Create dataset for ImSplice dataset with subdirectory structure"""
+        data = []
+        
+        if not os.path.exists(base_dir):
+            logger.error(f"ImSplice dataset directory not found: {base_dir}")
+            return pd.DataFrame(data)
+        
+        # Get authentic and forged prefixes
+        authentic_prefixes = CURRENT_DATASET.get("authentic_prefixes", ["Au-"])
+        forged_prefixes = CURRENT_DATASET.get("forged_prefixes", ["Sp-"])
+        
+        # Process all subdirectories
+        for subdir in os.listdir(base_dir):
+            subdir_path = os.path.join(base_dir, subdir)
+            if not os.path.isdir(subdir_path):
+                continue
+            
+            # Determine if this is authentic or forged based on directory name
+            is_authentic = any(subdir.startswith(prefix) for prefix in authentic_prefixes)
+            is_forged = any(subdir.startswith(prefix) for prefix in forged_prefixes)
+            
+            if not (is_authentic or is_forged):
+                logger.warning(f"Skipping unknown subdirectory: {subdir}")
+                continue
+            
+            # Get all files in subdirectory
+            subdir_files = []
+            for ext in file_extensions:
+                subdir_files.extend(glob.glob(os.path.join(subdir_path, ext)))
+            
+            for file_path in subdir_files:
+                filename = os.path.basename(file_path)
+                
+                if is_authentic:
+                    label = 0
+                    category = f"authentic_{subdir}"
+                else:  # is_forged
+                    label = 1
+                    category = f"forged_{subdir}"
+                
+                data.append({
+                    'filename': filename,
+                    'filepath': file_path,
+                    'label': label,
+                    'category': category,
+                    'subdirectory': subdir
+                })
+            
+            logger.info(f"Found {len(subdir_files)} images in {subdir}")
+        
+        logger.info(f"Total ImSplice dataset: {len(data)} images")
+        authentic_count = sum(1 for item in data if item['label'] == 0)
+        forged_count = sum(1 for item in data if item['label'] == 1)
+        logger.info(f"  Authentic: {authentic_count} images")
+        logger.info(f"  Forged: {forged_count} images")
         
         return pd.DataFrame(data)
 
@@ -259,6 +322,10 @@ def verify_dataset():
     # Print current dataset info
     print_dataset_info()
     
+    # Handle ImSpliceDataset special structure
+    if ACTIVE_DATASET == "imslice" and CURRENT_DATASET.get("use_subdirectories", False):
+        return verify_imslice_dataset()
+    
     # Check directories
     if not os.path.exists(AUTHENTIC_DIR):
         logger.error(f"Authentic directory not found: {AUTHENTIC_DIR}")
@@ -286,6 +353,57 @@ def verify_dataset():
         return False
     
     logger.info("Dataset verification passed!")
+    return True
+
+def verify_imslice_dataset():
+    """
+    Verify ImSpliceDataset with subdirectory structure
+    """
+    base_dir = AUTHENTIC_DIR  # Both authentic and forged are in same base directory
+    
+    if not os.path.exists(base_dir):
+        logger.error(f"ImSplice dataset directory not found: {base_dir}")
+        return False
+    
+    # Get authentic and forged prefixes
+    authentic_prefixes = CURRENT_DATASET.get("authentic_prefixes", ["Au-"])
+    forged_prefixes = CURRENT_DATASET.get("forged_prefixes", ["Sp-"])
+    file_extensions = CURRENT_DATASET["file_extensions"]
+    
+    auth_files = 0
+    forged_files = 0
+    auth_dirs = []
+    forged_dirs = []
+    
+    # Check all subdirectories
+    for subdir in os.listdir(base_dir):
+        subdir_path = os.path.join(base_dir, subdir)
+        if not os.path.isdir(subdir_path):
+            continue
+        
+        # Determine if this is authentic or forged
+        is_authentic = any(subdir.startswith(prefix) for prefix in authentic_prefixes)
+        is_forged = any(subdir.startswith(prefix) for prefix in forged_prefixes)
+        
+        if is_authentic:
+            auth_dirs.append(subdir)
+            for ext in file_extensions:
+                auth_files += len(glob.glob(os.path.join(subdir_path, ext)))
+        elif is_forged:
+            forged_dirs.append(subdir)
+            for ext in file_extensions:
+                forged_files += len(glob.glob(os.path.join(subdir_path, ext)))
+    
+    logger.info(f"Found {len(auth_dirs)} authentic subdirectories: {auth_dirs}")
+    logger.info(f"Found {len(forged_dirs)} forged subdirectories: {forged_dirs}")
+    logger.info(f"Found {auth_files} authentic images")
+    logger.info(f"Found {forged_files} forged images")
+    
+    if auth_files == 0 or forged_files == 0:
+        logger.error("No images found in authentic or forged subdirectories")
+        return False
+    
+    logger.info("ImSplice dataset verification passed!")
     return True
 
 if __name__ == "__main__":

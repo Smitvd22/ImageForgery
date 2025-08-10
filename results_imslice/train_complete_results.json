@@ -1,0 +1,287 @@
+{
+  "best_model": "mlp",
+  "best_metrics": {
+    "accuracy": 0.9163439194422928,
+    "precision": 0.9175903562780137,
+    "recall": 0.9163439194422928,
+    "f1_score": 0.9162516206562344,
+    "roc_auc": 0.9702218360400755,
+    "confusion_matrix": [
+      [
+        617,
+        36
+      ],
+      [
+        72,
+        566
+      ]
+    ],
+    "true_negatives": 617,
+    "false_positives": 36,
+    "false_negatives": 72,
+    "true_positives": 566,
+    "specificity": 0.9448698315467075,
+    "sensitivity": 0.8871473354231975,
+    "classification_report": {
+      "Authentic": {
+        "precision": 0.895500725689405,
+        "recall": 0.9448698315467075,
+        "f1-score": 0.9195230998509687,
+        "support": 653.0
+      },
+      "Forged": {
+        "precision": 0.9401993355481728,
+        "recall": 0.8871473354231975,
+        "f1-score": 0.9129032258064517,
+        "support": 638.0
+      },
+      "accuracy": 0.9163439194422928,
+      "macro avg": {
+        "precision": 0.9178500306187889,
+        "recall": 0.9160085834849525,
+        "f1-score": 0.9162131628287102,
+        "support": 1291.0
+      },
+      "weighted avg": {
+        "precision": 0.9175903562780137,
+        "recall": 0.9163439194422928,
+        "f1-score": 0.9162516206562344,
+        "support": 1291.0
+      }
+    },
+    "cv_accuracy_mean": 0.8102481218760289,
+    "cv_accuracy_std": 0.01854945880409374,
+    "cv_f1_mean": 0.8099350218645964,
+    "cv_f1_std": 0.018482670114290476
+  },
+  "all_results": {
+    "rf": {
+      "accuracy": 0.8048024786986832,
+      "precision": 0.8088280695725021,
+      "recall": 0.8048024786986832,
+      "f1_score": 0.8039884494793634,
+      "roc_auc": 0.881244989366656,
+      "confusion_matrix": [
+        [
+          565,
+          88
+        ],
+        [
+          164,
+          474
+        ]
+      ],
+      "true_negatives": 565,
+      "false_positives": 88,
+      "false_negatives": 164,
+      "true_positives": 474,
+      "specificity": 0.8652373660030628,
+      "sensitivity": 0.7429467084639498,
+      "classification_report": {
+        "Authentic": {
+          "precision": 0.7750342935528121,
+          "recall": 0.8652373660030628,
+          "f1-score": 0.8176555716353111,
+          "support": 653.0
+        },
+        "Forged": {
+          "precision": 0.8434163701067615,
+          "recall": 0.7429467084639498,
+          "f1-score": 0.79,
+          "support": 638.0
+        },
+        "accuracy": 0.8048024786986832,
+        "macro avg": {
+          "precision": 0.8092253318297868,
+          "recall": 0.8040920372335063,
+          "f1-score": 0.8038277858176556,
+          "support": 1291.0
+        },
+        "weighted avg": {
+          "precision": 0.8088280695725021,
+          "recall": 0.8048024786986832,
+          "f1-score": 0.8039884494793634,
+          "support": 1291.0
+        }
+      },
+      "cv_accuracy_mean": 0.7513513513513514,
+      "cv_accuracy_std": 0.017966369975747333,
+      "cv_f1_mean": 0.7506723377586726,
+      "cv_f1_std": 0.017675730884420322
+    },
+    "et": {
+      "accuracy": 0.7676219984508134,
+      "precision": 0.7712673744222529,
+      "recall": 0.7676219984508134,
+      "f1_score": 0.7666053292772161,
+      "roc_auc": 0.8306261911505614,
+      "confusion_matrix": [
+        [
+          542,
+          111
+        ],
+        [
+          189,
+          449
+        ]
+      ],
+      "true_negatives": 542,
+      "false_positives": 111,
+      "false_negatives": 189,
+      "true_positives": 449,
+      "specificity": 0.8300153139356815,
+      "sensitivity": 0.7037617554858934,
+      "classification_report": {
+        "Authentic": {
+          "precision": 0.7414500683994528,
+          "recall": 0.8300153139356815,
+          "f1-score": 0.7832369942196532,
+          "support": 653.0
+        },
+        "Forged": {
+          "precision": 0.8017857142857143,
+          "recall": 0.7037617554858934,
+          "f1-score": 0.7495826377295493,
+          "support": 638.0
+        },
+        "accuracy": 0.7676219984508134,
+        "macro avg": {
+          "precision": 0.7716178913425835,
+          "recall": 0.7668885347107874,
+          "f1-score": 0.7664098159746012,
+          "support": 1291.0
+        },
+        "weighted avg": {
+          "precision": 0.7712673744222529,
+          "recall": 0.7676219984508134,
+          "f1-score": 0.7666053292772161,
+          "support": 1291.0
+        }
+      },
+      "cv_accuracy_mean": 0.7459549250246924,
+      "cv_accuracy_std": 0.017079977482746964,
+      "cv_f1_mean": 0.7446665765056146,
+      "cv_f1_std": 0.016942128831683532
+    },
+    "xgb": {
+      "accuracy": 0.8164213787761425,
+      "precision": 0.8179545268586543,
+      "recall": 0.8164213787761425,
+      "f1_score": 0.8160996706939635,
+      "roc_auc": 0.9015551565717905,
+      "confusion_matrix": [
+        [
+          558,
+          95
+        ],
+        [
+          142,
+          496
+        ]
+      ],
+      "true_negatives": 558,
+      "false_positives": 95,
+      "false_negatives": 142,
+      "true_positives": 496,
+      "specificity": 0.8545176110260337,
+      "sensitivity": 0.7774294670846394,
+      "classification_report": {
+        "Authentic": {
+          "precision": 0.7971428571428572,
+          "recall": 0.8545176110260337,
+          "f1-score": 0.8248337028824834,
+          "support": 653.0
+        },
+        "Forged": {
+          "precision": 0.8392554991539763,
+          "recall": 0.7774294670846394,
+          "f1-score": 0.807160292921074,
+          "support": 638.0
+        },
+        "accuracy": 0.8164213787761425,
+        "macro avg": {
+          "precision": 0.8181991781484168,
+          "recall": 0.8159735390553366,
+          "f1-score": 0.8159969979017787,
+          "support": 1291.0
+        },
+        "weighted avg": {
+          "precision": 0.8179545268586543,
+          "recall": 0.8164213787761425,
+          "f1-score": 0.8160996706939635,
+          "support": 1291.0
+        }
+      },
+      "cv_accuracy_mean": 0.763757445152794,
+      "cv_accuracy_std": 0.015940199726579642,
+      "cv_f1_mean": 0.7634908293559465,
+      "cv_f1_std": 0.015760706447987462
+    },
+    "mlp": {
+      "accuracy": 0.9163439194422928,
+      "precision": 0.9175903562780137,
+      "recall": 0.9163439194422928,
+      "f1_score": 0.9162516206562344,
+      "roc_auc": 0.9702218360400755,
+      "confusion_matrix": [
+        [
+          617,
+          36
+        ],
+        [
+          72,
+          566
+        ]
+      ],
+      "true_negatives": 617,
+      "false_positives": 36,
+      "false_negatives": 72,
+      "true_positives": 566,
+      "specificity": 0.9448698315467075,
+      "sensitivity": 0.8871473354231975,
+      "classification_report": {
+        "Authentic": {
+          "precision": 0.895500725689405,
+          "recall": 0.9448698315467075,
+          "f1-score": 0.9195230998509687,
+          "support": 653.0
+        },
+        "Forged": {
+          "precision": 0.9401993355481728,
+          "recall": 0.8871473354231975,
+          "f1-score": 0.9129032258064517,
+          "support": 638.0
+        },
+        "accuracy": 0.9163439194422928,
+        "macro avg": {
+          "precision": 0.9178500306187889,
+          "recall": 0.9160085834849525,
+          "f1-score": 0.9162131628287102,
+          "support": 1291.0
+        },
+        "weighted avg": {
+          "precision": 0.9175903562780137,
+          "recall": 0.9163439194422928,
+          "f1-score": 0.9162516206562344,
+          "support": 1291.0
+        }
+      },
+      "cv_accuracy_mean": 0.8102481218760289,
+      "cv_accuracy_std": 0.01854945880409374,
+      "cv_f1_mean": 0.8099350218645964,
+      "cv_f1_std": 0.018482670114290476
+    }
+  },
+  "training_times": {
+    "rf": 0.10257792472839355,
+    "et": 0.06739139556884766,
+    "xgb": 0.1153569221496582,
+    "mlp": 0.2573275566101074
+  },
+  "feature_count": 4517,
+  "sample_count": 1291,
+  "gpu_used": true,
+  "gpu_name": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+  "training_timestamp": "2025-08-09T17:01:21.826225",
+  "total_training_time": 81.55443906784058
+}

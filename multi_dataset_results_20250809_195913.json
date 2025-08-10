@@ -1,0 +1,49 @@
+{
+  "start_time": "2025-08-09T19:57:28.125886",
+  "end_time": "2025-08-09T19:59:13.652926",
+  "total_duration_seconds": 105.52704,
+  "results": {
+    "MISD": {
+      "training": {
+        "success": false,
+        "accuracy": null
+      },
+      "validation": {
+        "success": false,
+        "accuracy": null
+      },
+      "testing": {
+        "success": false,
+        "accuracy": null
+      }
+    },
+    "4CAM": {
+      "training": {
+        "success": false,
+        "accuracy": null
+      },
+      "validation": {
+        "success": false,
+        "accuracy": null
+      },
+      "testing": {
+        "success": false,
+        "accuracy": null
+      }
+    },
+    "IMSLICE": {
+      "training": {
+        "success": false,
+        "accuracy": null
+      },
+      "validation": {
+        "success": false,
+        "accuracy": null
+      },
+      "testing": {
+        "success": false,
+        "accuracy": null
+      }
+    }
+  }
+}

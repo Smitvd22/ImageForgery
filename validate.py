@@ -27,6 +27,9 @@ from sklearn.metrics import (
     roc_auc_score, roc_curve, confusion_matrix, classification_report
 )
 
+# Import configuration
+from core.config import *
+
 # Suppress warnings
 warnings.filterwarnings('ignore')
 
@@ -117,9 +120,9 @@ class ForgeryValidator:
         
         logger.info(f" {dataset_name} size: {len(image_paths)} images")
         
-        # Transform for CNN models (exactly matching training)
+        # Transform for CNN models (matching enhanced training)
         transform = T.Compose([
-            T.Resize((224, 224)),
+            T.Resize(IMAGE_SIZE),  # Now using 512x512 for better feature extraction
             T.ToTensor(),
             T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
@@ -403,6 +406,7 @@ def main():
     print("=" * 80)
     
     # Create results directory if it doesn't exist
+    from core.config import RESULTS_DIR
     os.makedirs(RESULTS_DIR, exist_ok=True)
     
     # Initialize validator

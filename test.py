@@ -27,6 +27,9 @@ import timm
 from PIL import Image
 import cv2
 
+# Import configuration
+from core.config import *
+
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     roc_auc_score, roc_curve, precision_recall_curve,
@@ -49,10 +52,24 @@ class CompleteForgeryTester:
     """Complete dataset tester with GPU acceleration and comprehensive evaluation"""
     
     def __init__(self, model_dir="./models"):
+        # Import config variables explicitly
+        from core.config import (DEVICE, GPU_AVAILABLE, GPU_NAME, RESULTS_DIR, 
+                                BEST_MODEL_PATH, SCALER_PATH, FEATURE_SELECTOR_PATH, 
+                                ALL_MODELS_PATH, ACTIVE_DATASET, IMAGE_SIZE)
+        
         self.model_dir = Path(model_dir)
         self.device = DEVICE
         self.gpu_available = GPU_AVAILABLE
         self.gpu_name = GPU_NAME
+        
+        # Store config variables as instance variables
+        self.RESULTS_DIR = RESULTS_DIR
+        self.BEST_MODEL_PATH = BEST_MODEL_PATH
+        self.SCALER_PATH = SCALER_PATH
+        self.FEATURE_SELECTOR_PATH = FEATURE_SELECTOR_PATH
+        self.ALL_MODELS_PATH = ALL_MODELS_PATH
+        self.ACTIVE_DATASET = ACTIVE_DATASET
+        self.IMAGE_SIZE = IMAGE_SIZE
         
         # Initialize results storage
         self.results = {}
@@ -149,9 +166,9 @@ class CompleteForgeryTester:
         
         logger.info(f" {dataset_name} size: {len(image_paths)} images")
         
-        # Transform for CNN models (exactly matching training)
+        # Transform for CNN models (matching enhanced training)
         transform = T.Compose([
-            T.Resize((224, 224)),
+            T.Resize(IMAGE_SIZE),  # Now using 512x512 for better feature extraction
             T.ToTensor(),
             T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
@@ -593,6 +610,9 @@ def main():
     print("=" * 80)
     print(" IMAGE FORGERY DETECTION - TEST DATASET EVALUATION")
     print("=" * 80)
+    
+    # Import all necessary config variables
+    from core.config import TEST_CSV, RESULTS_DIR
     
     # Initialize tester
     tester = CompleteForgeryTester()

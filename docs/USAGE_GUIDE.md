@@ -1,6 +1,6 @@
 # Image Forgery Detection - Complete Usage Guide
 
-This comprehensive guide demonstrates how to use the multi-dataset image forgery detection system with support for both 4CAM and MISD datasets.
+This comprehensive guide demonstrates how to use the multi-dataset image forgery detection system with support for 4CAM, MISD, and ImSplice datasets.
 
 ## 🎯 Project Overview
 
@@ -8,7 +8,7 @@ This project implements a state-of-the-art image forgery detection system with t
 
 ### ✅ Implemented Features
 
-1. **Multi-Dataset Support** - 4CAM (TIF) and MISD (JPG/BMP/PNG) datasets
+1. **Multi-Dataset Support** - 4CAM (TIF), MISD (JPG/BMP/PNG), and ImSplice (BMP) datasets
 2. **Dataset Management** - Easy switching between datasets
 3. **Preprocessing Pipeline** - Advanced noise suppression and enhancement
 4. **Multi-backbone Architecture** - ResNet50, EfficientNet-B0, DenseNet121
@@ -37,6 +37,9 @@ python dataset_manager.py switch misd
 
 # Switch to 4CAM dataset
 python dataset_manager.py switch 4cam
+
+# Switch to ImSplice dataset
+python dataset_manager.py switch imslice
 ```
 
 ### 3. Train Models
