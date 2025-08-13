@@ -22,7 +22,7 @@ def switch_dataset(target_dataset):
         content = f.read()
     
     # Available datasets
-    valid_datasets = ["4cam", "misd"]
+    valid_datasets = ["4cam", "misd", "imsplice"]
     
     if target_dataset not in valid_datasets:
         print(f"Error: Invalid dataset '{target_dataset}'. Valid options: {valid_datasets}")
@@ -116,7 +116,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="Dataset Management Utility")
-    parser.add_argument("--switch", choices=["4cam", "misd"], 
+    parser.add_argument("--switch", choices=["4cam", "misd", "imsplice"], 
                        help="Switch to specified dataset")
     parser.add_argument("--show", action="store_true",
                        help="Show current dataset configuration")
@@ -157,7 +157,7 @@ def main():
     elif args.full_test:
         print("🔄 Running full test on both datasets...")
         
-        datasets = ["4cam", "misd"]
+        datasets = ["4cam", "misd", "imsplice"]
         for dataset in datasets:
             print(f"\n{'='*80}")
             print(f"TESTING {dataset.upper()} DATASET")

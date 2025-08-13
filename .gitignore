@@ -65,6 +65,7 @@ desktop.ini
 # ---------------
 results_4cam/
 results_misd/
+results_imsplice/
 outputs/
 predictions/
 *.backup

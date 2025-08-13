@@ -23,8 +23,8 @@ if GPU_AVAILABLE:
     torch.backends.cudnn.enabled = True
 
 # Dataset Selection Configuration
-# Change this to switch between datasets: "4cam" or "misd"
-ACTIVE_DATASET = "misd"  # Options: "4cam", "misd"
+# Change this to switch between datasets: "4cam", "misd", or "imsplice"
+ACTIVE_DATASET = "imsplice"  # Options: "4cam", "misd"
 
 # Dataset Configuration
 DATA_ROOT = "./data"
@@ -46,6 +46,16 @@ DATASETS = {
         "file_extensions": ["*.jpg", "*.JPG", "*.bmp", "*.png"],
         "description": "Multiple Image Splicing Dataset with JPG/BMP images",
         "results_dir": "./results_misd"
+    },
+    "imsplice": {
+        "name": "ImSplice Dataset",
+        "authentic_dir": os.path.join(DATA_ROOT, "ImSpliceDataset"),
+        "forged_dir": os.path.join(DATA_ROOT, "ImSpliceDataset"),
+        "file_extensions": ["*.bmp", "*.jpg", "*.png"],
+        "description": "ImSplice Dataset with multiple authentic and spliced subdirectories",
+        "results_dir": "./results_imsplice",
+        "authentic_subdirs": ["Au-S", "Au-SS-H", "Au-SS-O", "Au-SS-V", "Au-T", "Au-TS-H", "Au-TS-O", "Au-TS-V", "Au-TT-H", "Au-TT-O", "Au-TT-V"],
+        "forged_subdirs": ["Sp-S", "Sp-SS-H", "Sp-SS-O", "Sp-SS-V", "Sp-T", "Sp-TS-H", "Sp-TS-O", "Sp-TS-V", "Sp-TT-H", "Sp-TT-O", "Sp-TT-V"]
     }
 }
 

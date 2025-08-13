@@ -39,61 +39,112 @@ class ForgeryDataset(Dataset):
         # Get file extensions for current dataset
         file_extensions = CURRENT_DATASET["file_extensions"]
         
-        # Process authentic images
-        if authentic_dir and os.path.exists(authentic_dir):
-            authentic_files = []
-            for ext in file_extensions:
-                authentic_files.extend(glob.glob(os.path.join(authentic_dir, ext)))
+        # Handle ImSpliceDataset with multiple subdirectories
+        if ACTIVE_DATASET == "imsplice":
+            # Process authentic subdirectories
+            authentic_subdirs = CURRENT_DATASET.get("authentic_subdirs", [])
+            for subdir in authentic_subdirs:
+                subdir_path = os.path.join(authentic_dir, subdir)
+                if os.path.exists(subdir_path):
+                    authentic_files = []
+                    for ext in file_extensions:
+                        authentic_files.extend(glob.glob(os.path.join(subdir_path, ext)))
+                    
+                    for file_path in authentic_files:
+                        filename = os.path.basename(file_path)
+                        # Skip Thumbs.db and other system files
+                        if filename.lower() in ['thumbs.db', '.ds_store']:
+                            continue
+                        
+                        data.append({
+                            'filename': filename,
+                            'filepath': file_path,
+                            'label': 0,  # 0 for authentic
+                            'category': f"authentic_{subdir}"
+                        })
             
-            for file_path in authentic_files:
-                # Extract category from filename
-                filename = os.path.basename(file_path)
-                category = 'authentic'
-                
-                # Handle different dataset naming conventions
-                if ACTIVE_DATASET == "misd" and filename.startswith('Au_'):
-                    # Extract category from MISD naming convention: Au_category_index.jpg
-                    parts = filename.split('_')
-                    if len(parts) >= 2:
-                        category = f"authentic_{parts[1]}"  # e.g., authentic_ani, authentic_art
-                elif ACTIVE_DATASET == "4cam":
-                    # Extract category from 4cam naming convention if needed
-                    category = 'authentic_4cam'
-                
-                data.append({
-                    'filename': filename,
-                    'filepath': file_path,
-                    'label': 0,  # 0 for authentic
-                    'category': category
-                })
-            logger.info(f"Found {len(authentic_files)} authentic images")
+            # Process forged subdirectories
+            forged_subdirs = CURRENT_DATASET.get("forged_subdirs", [])
+            for subdir in forged_subdirs:
+                subdir_path = os.path.join(forged_dir, subdir)
+                if os.path.exists(subdir_path):
+                    forged_files = []
+                    for ext in file_extensions:
+                        forged_files.extend(glob.glob(os.path.join(subdir_path, ext)))
+                    
+                    for file_path in forged_files:
+                        filename = os.path.basename(file_path)
+                        # Skip Thumbs.db and other system files
+                        if filename.lower() in ['thumbs.db', '.ds_store']:
+                            continue
+                        
+                        data.append({
+                            'filename': filename,
+                            'filepath': file_path,
+                            'label': 1,  # 1 for forged
+                            'category': f"forged_{subdir}"
+                        })
+            
+            logger.info(f"Found {len([d for d in data if d['label'] == 0])} authentic images")
+            logger.info(f"Found {len([d for d in data if d['label'] == 1])} forged images")
         
-        # Process forged images
-        if forged_dir and os.path.exists(forged_dir):
-            forged_files = []
-            for ext in file_extensions:
-                forged_files.extend(glob.glob(os.path.join(forged_dir, ext)))
+        else:
+            # Original logic for other datasets
+            # Process authentic images
+            if authentic_dir and os.path.exists(authentic_dir):
+                authentic_files = []
+                for ext in file_extensions:
+                    authentic_files.extend(glob.glob(os.path.join(authentic_dir, ext)))
+                
+                for file_path in authentic_files:
+                    # Extract category from filename
+                    filename = os.path.basename(file_path)
+                    category = 'authentic'
+                    
+                    # Handle different dataset naming conventions
+                    if ACTIVE_DATASET == "misd" and filename.startswith('Au_'):
+                        # Extract category from MISD naming convention: Au_category_index.jpg
+                        parts = filename.split('_')
+                        if len(parts) >= 2:
+                            category = f"authentic_{parts[1]}"  # e.g., authentic_ani, authentic_art
+                    elif ACTIVE_DATASET == "4cam":
+                        # Extract category from 4cam naming convention if needed
+                        category = 'authentic_4cam'
+                    
+                    data.append({
+                        'filename': filename,
+                        'filepath': file_path,
+                        'label': 0,  # 0 for authentic
+                        'category': category
+                    })
+                logger.info(f"Found {len(authentic_files)} authentic images")
             
-            for file_path in forged_files:
-                # Extract information from filename
-                filename = os.path.basename(file_path)
-                category = 'forged'
+            # Process forged images
+            if forged_dir and os.path.exists(forged_dir):
+                forged_files = []
+                for ext in file_extensions:
+                    forged_files.extend(glob.glob(os.path.join(forged_dir, ext)))
                 
-                # Handle different dataset naming conventions
-                if ACTIVE_DATASET == "misd" and filename.startswith('Sp_D_'):
-                    # MISD spliced images: Sp_D_source_target_..._id.jpg
-                    category = 'multiple_spliced'
-                elif ACTIVE_DATASET == "4cam":
-                    # 4cam forged images
-                    category = 'forged_4cam'
-                
-                data.append({
-                    'filename': filename,
-                    'filepath': file_path,
-                    'label': 1,  # 1 for forged
-                    'category': category
-                })
-            logger.info(f"Found {len(forged_files)} forged images")
+                for file_path in forged_files:
+                    # Extract information from filename
+                    filename = os.path.basename(file_path)
+                    category = 'forged'
+                    
+                    # Handle different dataset naming conventions
+                    if ACTIVE_DATASET == "misd" and filename.startswith('Sp_D_'):
+                        # MISD spliced images: Sp_D_source_target_..._id.jpg
+                        category = 'multiple_spliced'
+                    elif ACTIVE_DATASET == "4cam":
+                        # 4cam forged images
+                        category = 'forged_4cam'
+                    
+                    data.append({
+                        'filename': filename,
+                        'filepath': file_path,
+                        'label': 1,  # 1 for forged
+                        'category': category
+                    })
+                logger.info(f"Found {len(forged_files)} forged images")
         
         return pd.DataFrame(data)
 
