@@ -77,6 +77,15 @@ class ForgeryValidator:
                 logger.warning(" Feature selector not found, using all features")
                 self.feature_selector = None
             
+            # Load RFE selector
+            try:
+                with open(RFE_SELECTOR_PATH, 'rb') as f:
+                    self.rfe_selector = pickle.load(f)
+                logger.info(" RFE selector loaded")
+            except FileNotFoundError:
+                logger.warning(" RFE selector not found, will not apply RFE")
+                self.rfe_selector = None
+            
             logger.info(f" Loaded {len(self.models)} trained models")
             
         except FileNotFoundError as e:
@@ -226,15 +235,22 @@ class ForgeryValidator:
         """Validate all trained models on validation set with threshold optimization"""
         logger.info(" Validating models on validation set...")
         
-        # Apply feature selection if available
+        # Apply feature selection pipeline exactly as in training
         if self.feature_selector is not None:
             features_selected = self.feature_selector.transform(features)
             logger.info(f"Applied feature selection: {features.shape[1]} -> {features_selected.shape[1]} features")
         else:
             features_selected = features
+        
+        # Apply RFE if available (this reduces from 200 to 100 features)
+        if self.rfe_selector is not None:
+            features_final = self.rfe_selector.transform(features_selected)
+            logger.info(f"Applied RFE: {features_selected.shape[1]} -> {features_final.shape[1]} features")
+        else:
+            features_final = features_selected
             
         # Scale features using training scaler
-        features_scaled = self.scaler.transform(features_selected)
+        features_scaled = self.scaler.transform(features_final)
         
         results = {}
         optimized_results = {}
@@ -265,19 +281,23 @@ class ForgeryValidator:
             # Optimize threshold if probabilities available
             if y_pred_proba_class1 is not None:
                 best_threshold, best_metrics = self.optimize_threshold(labels, y_pred_proba_class1)
-                # Copy timing information to optimized metrics
-                best_metrics['validation_time'] = metrics['validation_time']
-                best_metrics['predictions_per_second'] = metrics['predictions_per_second']
-                best_metrics['optimized_threshold'] = best_threshold
-                
-                optimized_results[model_name] = {
-                    'best_threshold': best_threshold,
-                    'optimized_metrics': best_metrics,
-                    'standard_metrics': metrics
-                }
-                
-                logger.info(f" {model_name.upper()}: Standard Acc={metrics['accuracy']:.4f} | "
-                           f"Optimized Acc={best_metrics['accuracy']:.4f} (threshold={best_threshold:.3f})")
+                if best_metrics is not None:
+                    # Copy timing information to optimized metrics
+                    best_metrics['validation_time'] = metrics['validation_time']
+                    best_metrics['predictions_per_second'] = metrics['predictions_per_second']
+                    best_metrics['optimized_threshold'] = best_threshold
+                    
+                    optimized_results[model_name] = {
+                        'best_threshold': best_threshold,
+                        'optimized_metrics': best_metrics,
+                        'standard_metrics': metrics
+                    }
+                    
+                    logger.info(f" {model_name.upper()}: Standard Acc={metrics['accuracy']:.4f} | "
+                               f"Optimized Acc={best_metrics['accuracy']:.4f} (threshold={best_threshold:.3f})")
+                else:
+                    logger.info(f" {model_name.upper()}: Acc={metrics['accuracy']:.4f} F1={metrics['f1_score']:.4f} "
+                               f"Prec={metrics['precision']:.4f} Rec={metrics['recall']:.4f}")
             else:
                 logger.info(f" {model_name.upper()}: Acc={metrics['accuracy']:.4f} F1={metrics['f1_score']:.4f} "
                            f"Prec={metrics['precision']:.4f} Rec={metrics['recall']:.4f}")
@@ -297,25 +317,29 @@ class ForgeryValidator:
         """Find optimal threshold for binary classification"""
         from sklearn.metrics import f1_score, accuracy_score
         
-        best_f1 = 0
-        best_threshold = 0.5
-        best_metrics = None
-        
-        # Test different thresholds
-        thresholds = np.arange(0.1, 0.9, 0.02)
-        
-        for threshold in thresholds:
-            y_pred_thresh = (probabilities >= threshold).astype(int)
+        try:
+            best_f1 = 0
+            best_threshold = 0.5
+            best_metrics = None
             
-            # Calculate metrics for this threshold
-            f1 = f1_score(true_labels, y_pred_thresh, average='binary')
+            # Test different thresholds
+            thresholds = np.arange(0.1, 0.9, 0.02)
             
-            if f1 > best_f1:
-                best_f1 = f1
-                best_threshold = threshold
-                best_metrics = self.calculate_metrics(true_labels, y_pred_thresh, probabilities)
-        
-        return best_threshold, best_metrics
+            for threshold in thresholds:
+                y_pred_thresh = (probabilities >= threshold).astype(int)
+                
+                # Calculate metrics for this threshold
+                f1 = f1_score(true_labels, y_pred_thresh, average='binary')
+                
+                if f1 > best_f1:
+                    best_f1 = f1
+                    best_threshold = threshold
+                    best_metrics = self.calculate_metrics(true_labels, y_pred_thresh, probabilities)
+            
+            return best_threshold, best_metrics
+        except Exception as e:
+            logger.warning(f"Threshold optimization failed: {e}")
+            return 0.5, None
     
     def calculate_metrics(self, true_labels, predictions, probabilities):
         """Calculate comprehensive validation metrics"""

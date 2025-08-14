@@ -7,6 +7,93 @@ import torch
 from scipy.signal import wiener
 from scipy.ndimage import uniform_filter, median_filter
 import os
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+
+def get_advanced_augmentation_pipeline(image_size=(384, 384), p=0.5):
+    """
+    Advanced augmentation pipeline with forgery-aware transformations
+    Designed to improve generalization while preserving forgery traces
+    """
+    return A.Compose([
+        # Geometric transformations (light)
+        A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=5, p=p),
+        A.HorizontalFlip(p=0.3),
+        
+        # Optical & perspective transformations (very light to preserve forgery traces)
+        A.OpticalDistortion(distort_limit=0.05, shift_limit=0.02, p=0.2),
+        A.Perspective(scale=(0.02, 0.05), p=0.2),
+        
+        # Color & lighting augmentations (preserve forgery color inconsistencies)
+        A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=p),
+        A.HueSaturationValue(hue_shift_limit=5, sat_shift_limit=10, val_shift_limit=10, p=0.3),
+        A.RandomGamma(gamma_limit=(95, 105), p=0.3),
+        
+        # Noise & quality degradation (simulate real-world conditions)
+        A.GaussNoise(var_limit=(5.0, 15.0), p=0.2),
+        A.ISONoise(color_shift=(0.01, 0.03), intensity=(0.05, 0.15), p=0.2),
+        A.MultiplicativeNoise(multiplier=(0.98, 1.02), p=0.1),
+        
+        # Compression artifacts (common in forgeries)
+        A.ImageCompression(quality_lower=85, quality_upper=100, p=0.3),
+        
+        # Edge-preserving blur (preserve forgery boundaries)
+        A.MotionBlur(blur_limit=3, p=0.1),
+        A.GaussianBlur(blur_limit=3, p=0.1),
+        
+        # Normalization and tensor conversion
+        A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ToTensorV2()
+    ])
+
+def get_test_transform(image_size=(384, 384)):
+    """Test-time transformation without augmentation"""
+    return A.Compose([
+        A.Resize(height=image_size[0], width=image_size[1]),
+        A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ToTensorV2()
+    ])
+
+def adaptive_histogram_equalization(img, clip_limit=2.0, tile_grid_size=(8, 8)):
+    """
+    Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+    Improves local contrast while preserving forgery artifacts
+    """
+    if len(img.shape) == 3:
+        # Convert RGB to LAB for better color preservation
+        lab = cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # Apply CLAHE to L channel
+        clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+        l_eq = clahe.apply(l)
+        
+        # Merge channels back
+        lab_eq = cv2.merge([l_eq, a, b])
+        rgb_eq = cv2.cvtColor(lab_eq, cv2.COLOR_LAB2RGB)
+        return rgb_eq.astype(np.float32) / 255.0
+    else:
+        # Grayscale
+        clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+        eq = clahe.apply((img * 255).astype(np.uint8))
+        return eq.astype(np.float32) / 255.0
+
+def enhance_edge_preservation(img, sigma_spatial=15, sigma_color=80):
+    """
+    Edge-preserving smoothing that maintains forgery boundaries
+    Uses bilateral filtering to smooth while preserving important edges
+    """
+    img_uint8 = (img * 255).astype(np.uint8)
+    
+    # Multiple scales of bilateral filtering
+    filtered1 = cv2.bilateralFilter(img_uint8, 9, sigma_color, sigma_spatial)
+    filtered2 = cv2.bilateralFilter(filtered1, 9, sigma_color//2, sigma_spatial//2)
+    
+    # Blend with original to preserve fine details
+    alpha = 0.7
+    enhanced = alpha * filtered2 + (1 - alpha) * img_uint8
+    
+    return enhanced.astype(np.float32) / 255.0
 
 def adjust_brightness_contrast(img, alpha=1.1, beta=5):
     """

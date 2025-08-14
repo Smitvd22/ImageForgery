@@ -24,7 +24,7 @@ if GPU_AVAILABLE:
 
 # Dataset Selection Configuration
 # Change this to switch between datasets: "4cam", "misd", or "imsplice"
-ACTIVE_DATASET = "imsplice"  # Options: "4cam", "misd"
+ACTIVE_DATASET = "misd"  # Options: "4cam", "misd"
 
 # Dataset Configuration
 DATA_ROOT = "./data"
@@ -79,6 +79,7 @@ BEST_MODEL_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}best_model.pkl")
 ALL_MODELS_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}all_models.pkl")
 SCALER_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}scaler.pkl")
 FEATURE_SELECTOR_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}feature_selector.pkl")
+RFE_SELECTOR_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}rfe_selector.pkl")
 
 # Enhanced Model Configuration for Maximum Performance
 BATCH_SIZE = 8  # Optimized for stability
@@ -86,11 +87,31 @@ IMAGE_SIZE = (384, 384)  # Standardized resolution for compatibility
 NUM_EPOCHS = 150  # More epochs for better convergence
 LEARNING_RATE = 0.00005  # Very low learning rate for stability
 
-# Training Configuration
+# Enhanced Training Configuration for Better Generalization
 TRAIN_SPLIT = 0.7
 VAL_SPLIT = 0.15
 TEST_SPLIT = 0.15
 RANDOM_SEED = 42
+
+# Advanced Training Parameters to Prevent Overfitting
+EARLY_STOPPING_PATIENCE = 15
+MIN_DELTA = 0.001
+REDUCE_LR_PATIENCE = 8
+REDUCE_LR_FACTOR = 0.5
+MIN_LR = 1e-7
+
+# Cross-Validation Configuration
+CV_FOLDS = 5
+CV_REPEATS = 2
+
+# Regularization Parameters
+DROPOUT_RATE = 0.3
+L2_REGULARIZATION = 0.01
+FEATURE_NOISE_STD = 0.1
+
+# Ensemble Configuration
+ENSEMBLE_SIZE = 7
+STACKING_CV_FOLDS = 3
 
 # Maximum Performance Architecture Configuration
 USE_IMPROVED_MODELS = True

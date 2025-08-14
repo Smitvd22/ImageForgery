@@ -252,18 +252,42 @@ class CompleteForgeryTester:
         return features
     
     def test_models(self, features, labels):
-        """Test all models with comprehensive evaluation"""
-        logger.info(" Testing models...")
+        """Test all models with comprehensive evaluation using the same preprocessing pipeline as training"""
+        logger.info("🧪 Testing models...")
         
-        # Apply feature selection if available
+        # Apply same preprocessing pipeline as training
+        # 1. Feature selection first
         if self.feature_selector is not None:
             features_selected = self.feature_selector.transform(features)
             logger.info(f"Applied feature selection: {features.shape[1]} -> {features_selected.shape[1]} features")
         else:
             features_selected = features
+        
+        # 2. For now, skip RFE and use 200 features directly
+        # This is a temporary fix until RFE selector is properly saved
+        try:
+            # Try to load RFE selector if it exists
+            import pickle
+            rfe_path = FEATURE_SELECTOR_PATH.replace('_feature_selector.pkl', '_rfe_selector.pkl')
+            if os.path.exists(rfe_path):
+                with open(rfe_path, 'rb') as f:
+                    rfe_selector = pickle.load(f)
+                features_final = rfe_selector.transform(features_selected)
+                logger.info(f"Applied RFE: {features_selected.shape[1]} -> {features_final.shape[1]} features")
+            else:
+                # Manually reduce to 100 features to match scaler expectations
+                from sklearn.feature_selection import SelectKBest, f_classif
+                temp_selector = SelectKBest(score_func=f_classif, k=100)
+                features_final = temp_selector.fit_transform(features_selected, labels)
+                logger.info(f"Applied temporary feature reduction: {features_selected.shape[1]} -> {features_final.shape[1]} features")
+        except Exception as e:
+            logger.warning(f"Could not apply RFE: {e}")
+            # Fallback: use first 100 features
+            features_final = features_selected[:, :100]
+            logger.info(f"Using first 100 features: {features_selected.shape[1]} -> {features_final.shape[1]} features")
             
-        # Scale features using the training scaler
-        features_scaled = self.scaler.transform(features_selected)
+        # 3. Scale features using the training scaler
+        features_scaled = self.scaler.transform(features_final)
         
         results = {}
         

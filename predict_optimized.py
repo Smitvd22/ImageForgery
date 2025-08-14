@@ -41,6 +41,7 @@ class OptimizedPredictor:
         self.model = None
         self.scaler = None
         self.feature_selector = None
+        self.rfe_selector = None
         self.loaded_models = {}
         self.config = None
         
@@ -109,6 +110,15 @@ class OptimizedPredictor:
                 with open(feature_selector_path, 'rb') as f:
                     self.feature_selector = pickle.load(f)
                 logger.info(f"✅ Feature selector loaded for {self.dataset.upper()}")
+            
+            # Load RFE selector if available
+            rfe_selector_path = os.path.join(MODELS_DIR, f"{model_prefix}rfe_selector.pkl")
+            if os.path.exists(rfe_selector_path):
+                with open(rfe_selector_path, 'rb') as f:
+                    self.rfe_selector = pickle.load(f)
+                logger.info(f"✅ RFE selector loaded for {self.dataset.upper()}")
+            else:
+                self.rfe_selector = None
             
             # Load configuration
             config_path = os.path.join(MODELS_DIR, f"{model_prefix}config.json")
@@ -251,6 +261,10 @@ class OptimizedPredictor:
             if self.feature_selector is not None:
                 features = self.feature_selector.transform(features)
             
+            # Apply RFE selection if available
+            if self.rfe_selector is not None:
+                features = self.rfe_selector.transform(features)
+            
             # Scale features if scaler is available
             if self.scaler is not None:
                 features = self.scaler.transform(features)
@@ -327,8 +341,8 @@ def main():
     """Main prediction function"""
     parser = argparse.ArgumentParser(description='Image Forgery Detection Prediction - Multi-Dataset Support')
     parser.add_argument('input', nargs='?', help='Image file or directory path')
-    parser.add_argument('--dataset', '-d', choices=['4cam', 'misd'], 
-                       help='Dataset to use (4cam or misd). If not specified, uses current active dataset')
+    parser.add_argument('--dataset', '-d', choices=['4cam', 'misd', 'imsplice'], 
+                       help='Dataset to use (4cam, misd, or imsplice). If not specified, uses current active dataset')
     parser.add_argument('--output', '-o', help='Output JSON file for batch results')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     parser.add_argument('--list-datasets', action='store_true', help='List available datasets and exit')

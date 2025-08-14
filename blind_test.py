@@ -9,7 +9,11 @@ from pathlib import Path
 import random
 import pandas as pd
 
-dataset = "imsplice"
+# Import the active dataset from config
+import sys
+sys.path.append('.')
+from core.config import ACTIVE_DATASET
+dataset = ACTIVE_DATASET
 
 def create_filename_blind_test():
     """Create a test where filenames don't reveal the class"""
