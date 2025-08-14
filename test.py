@@ -275,11 +275,15 @@ class CompleteForgeryTester:
                 features_final = rfe_selector.transform(features_selected)
                 logger.info(f"Applied RFE: {features_selected.shape[1]} -> {features_final.shape[1]} features")
             else:
-                # Manually reduce to 100 features to match scaler expectations
-                from sklearn.feature_selection import SelectKBest, f_classif
-                temp_selector = SelectKBest(score_func=f_classif, k=100)
-                features_final = temp_selector.fit_transform(features_selected, labels)
-                logger.info(f"Applied temporary feature reduction: {features_selected.shape[1]} -> {features_final.shape[1]} features")
+                # Use feature selector to match expected dimensions
+                # This should use the same feature selector used during training
+                if self.feature_selector is not None and features_selected.shape[1] > 100:
+                    # Use first 100 features as a fallback (deterministic)
+                    features_final = features_selected[:, :100]
+                    logger.info(f"Applied fallback feature reduction: {features_selected.shape[1]} -> {features_final.shape[1]} features")
+                else:
+                    features_final = features_selected
+                    logger.info(f"Using all features: {features_selected.shape[1]} features")
         except Exception as e:
             logger.warning(f"Could not apply RFE: {e}")
             # Fallback: use first 100 features

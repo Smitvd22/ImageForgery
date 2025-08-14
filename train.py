@@ -1048,13 +1048,10 @@ def main():
         logger.info("   Please run dataset_manager.py first to create training splits")
         return 0.0
     
-    # Load training and validation data
+    # Load training data
     train_df = pd.read_csv(TRAIN_CSV)
-    val_df = pd.read_csv(VAL_CSV) if os.path.exists(VAL_CSV) else None
     
     logger.info(f"📊 Training samples: {len(train_df)}")
-    if val_df is not None:
-        logger.info(f"📊 Validation samples: {len(val_df)}")
     
     # Extract features from training dataset
     logger.info("🔍 Extracting features from training dataset...")
@@ -1066,14 +1063,6 @@ def main():
         logger.error("❌ Failed to extract features from training dataset")
         return 0.0
     
-    # Extract validation features if available
-    val_features, val_labels = None, None
-    if val_df is not None:
-        logger.info("🔍 Extracting features from validation dataset...")
-        val_features, val_labels, _ = trainer.extract_features_from_dataset(
-            VAL_CSV, "Validation Dataset"
-        )
-    
     # Enhanced training with regularization
     logger.info("🎯 Starting enhanced training with regularization...")
     training_results = trainer.train_ensemble_with_regularization(
@@ -1083,60 +1072,6 @@ def main():
     if not training_results:
         logger.error("❌ Training failed")
         return 0.0
-    
-    # Validate on validation set if available
-    if val_features is not None:
-        logger.info("🧪 Validating on held-out validation set...")
-        
-        best_model = training_results['best_model']
-        scaler = training_results['scaler']
-        feature_selector = training_results['feature_selector']
-        
-        # Apply same preprocessing pipeline as training
-        # 1. Feature selection first
-        val_features_selected = feature_selector.transform(val_features)
-        logger.info(f"   Validation features after selection: {val_features_selected.shape}")
-        
-        # 2. Apply RFE if used
-        if training_results['rfe_selector'] is not None:
-            val_features_final = training_results['rfe_selector'].transform(val_features_selected)
-            logger.info(f"   Validation features after RFE: {val_features_final.shape}")
-        else:
-            val_features_final = val_features_selected
-        
-        # 3. Scale features
-        val_features_scaled = scaler.transform(val_features_final)
-        
-        # Predict
-        val_predictions = best_model.predict(val_features_scaled)
-        val_probabilities = best_model.predict_proba(val_features_scaled)[:, 1] if hasattr(best_model, 'predict_proba') else None
-        
-        # Calculate validation metrics
-        val_accuracy = accuracy_score(val_labels, val_predictions)
-        val_f1 = f1_score(val_labels, val_predictions, average='weighted')
-        val_precision = precision_score(val_labels, val_predictions, average='weighted')
-        val_recall = recall_score(val_labels, val_predictions, average='weighted')
-        val_auc = roc_auc_score(val_labels, val_probabilities) if val_probabilities is not None else 0.0
-        
-        logger.info(f"✅ Validation Results:")
-        logger.info(f"   Accuracy: {val_accuracy:.4f} ({val_accuracy*100:.2f}%)")
-        logger.info(f"   F1-Score: {val_f1:.4f}")
-        logger.info(f"   Precision: {val_precision:.4f}")
-        logger.info(f"   Recall: {val_recall:.4f}")
-        logger.info(f"   ROC AUC: {val_auc:.4f}")
-        
-        # Check for overfitting
-        best_cv_accuracy = training_results['cv_scores'][training_results['best_model_name']]['mean']
-        accuracy_gap = best_cv_accuracy - val_accuracy
-        
-        if accuracy_gap > 0.05:  # 5% gap indicates overfitting
-            logger.warning(f"⚠️ Potential overfitting detected!")
-            logger.warning(f"   CV Accuracy: {best_cv_accuracy:.4f}")
-            logger.warning(f"   Validation Accuracy: {val_accuracy:.4f}")
-            logger.warning(f"   Gap: {accuracy_gap:.4f}")
-        else:
-            logger.info(f"✅ Good generalization!")
-            logger.info(f"   CV-Validation gap: {accuracy_gap:.4f}")
     
     # Save models and results
     logger.info("💾 Saving models and results...")
@@ -1176,17 +1111,6 @@ def main():
         'timestamp': datetime.now().isoformat()
     }
     
-    # Add validation results if available
-    if val_features is not None:
-        final_results['validation_results'] = {
-            'accuracy': val_accuracy,
-            'f1_score': val_f1,
-            'precision': val_precision,
-            'recall': val_recall,
-            'roc_auc': val_auc,
-            'overfitting_gap': accuracy_gap
-        }
-    
     # Save results
     with open(os.path.join(RESULTS_DIR, 'enhanced_training_results.json'), 'w') as f:
         json.dump(final_results, f, indent=2, default=str)
@@ -1205,15 +1129,14 @@ def main():
     print(f"🔍 Features: {train_features.shape[1]}")
     print(f"🏆 Best Model: {best_model_name.upper()}")
     print(f"📈 CV Accuracy: {best_cv_score:.4f} ({best_cv_score*100:.2f}%)")
-    if val_features is not None:
-        print(f"🧪 Validation Accuracy: {val_accuracy:.4f} ({val_accuracy*100:.2f}%)")
-        print(f"📉 Overfitting Gap: {accuracy_gap:.4f}")
     print(f"⏱️ Total Training Time: {total_time:.2f} seconds")
     print(f"💾 Models saved to: ./models/")
     print(f"📄 Results saved to: {RESULTS_DIR}")
     print("=" * 80)
+    print("🔍 Run validate.py to evaluate on validation set")
+    print("=" * 80)
     
-    return val_accuracy if val_features is not None else best_cv_score
+    return best_cv_score
 
 if __name__ == "__main__":
     accuracy = main()
