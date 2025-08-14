@@ -338,15 +338,21 @@ class UltraEnhancedXGBoostClassifier:
         }
         print(f"XGBoost CV AUC: {xgb_scores.mean():.4f} ± {xgb_scores.std():.4f}")
         
-        # LightGBM cross-validation
+        # LightGBM cross-validation with conservative parameters
         if LIGHTGBM_AVAILABLE:
             try:
                 lgb_model = lgb.LGBMClassifier(
                     objective='binary',
                     metric='binary_logloss',
-                    num_leaves=100,
-                    learning_rate=0.05,
-                    n_estimators=1000,
+                    num_leaves=15,  # Much smaller
+                    learning_rate=0.1,  # Higher but with fewer estimators
+                    n_estimators=200,  # Fewer estimators
+                    min_child_samples=50,  # Strong regularization
+                    min_split_gain=0.1,
+                    reg_alpha=0.3,
+                    reg_lambda=0.3,
+                    feature_fraction=0.6,
+                    bagging_fraction=0.6,
                     random_state=42,
                     verbosity=-1
                 )
@@ -402,11 +408,13 @@ class UltraEnhancedXGBoostClassifier:
         
         print(f"Performing advanced hyperparameter tuning with {n_iter} iterations...")
         
-        # Create base model for tuning
+        # Create base model for tuning - Remove early stopping for CV compatibility
         base_model = xgb.XGBClassifier(
             random_state=42,
             n_jobs=-1,
-            verbosity=0
+            verbosity=0,
+            # Remove any early stopping parameters that require validation set
+            early_stopping_rounds=None
         )
         
         # Randomized search
