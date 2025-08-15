@@ -10,6 +10,7 @@ import json
 import time
 import warnings
 import logging
+import argparse
 import numpy as np
 import pandas as pd
 import pickle
@@ -37,6 +38,42 @@ logger = logging.getLogger(__name__)
 # Import configuration
 from core.config import *
 from core.models import TIMM_AVAILABLE
+
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='Image Forgery Detection Validation')
+    parser.add_argument('--dataset', choices=['4cam', 'misd', 'imsplice'], 
+                      default='imsplice', help='Dataset to use for validation')
+    return parser.parse_args()
+
+def update_config_for_dataset(dataset_name):
+    """Update global configuration variables for the specified dataset"""
+    global ACTIVE_DATASET, CURRENT_DATASET, AUTHENTIC_DIR, FORGED_DIR
+    global DATA_CSV, TRAIN_CSV, VAL_CSV, TEST_CSV, RESULTS_DIR
+    global BEST_MODEL_PATH, ALL_MODELS_PATH, SCALER_PATH, FEATURE_SELECTOR_PATH
+    
+    # Update the active dataset
+    ACTIVE_DATASET = dataset_name
+    CURRENT_DATASET = DATASETS[ACTIVE_DATASET]
+    AUTHENTIC_DIR = CURRENT_DATASET["authentic_dir"]
+    FORGED_DIR = CURRENT_DATASET["forged_dir"]
+    
+    # Update paths
+    DATASET_PREFIX = f"{ACTIVE_DATASET}_"
+    DATA_CSV = os.path.join(DATA_ROOT, f"{DATASET_PREFIX}labels.csv")
+    TRAIN_CSV = os.path.join(DATA_ROOT, f"{DATASET_PREFIX}train_labels.csv")
+    VAL_CSV = os.path.join(DATA_ROOT, f"{DATASET_PREFIX}val_labels.csv")
+    TEST_CSV = os.path.join(DATA_ROOT, f"{DATASET_PREFIX}test_labels.csv")
+    
+    RESULTS_DIR = f"./results_{ACTIVE_DATASET}"
+    BEST_MODEL_PATH = os.path.join(MODELS_DIR, f"{DATASET_PREFIX}best_model.pkl")
+    ALL_MODELS_PATH = os.path.join(MODELS_DIR, f"{DATASET_PREFIX}all_models.pkl")
+    SCALER_PATH = os.path.join(MODELS_DIR, f"{DATASET_PREFIX}scaler.pkl")
+    FEATURE_SELECTOR_PATH = os.path.join(MODELS_DIR, f"{DATASET_PREFIX}feature_selector.pkl")
+    
+    logger.info(f"📊 Updated validation configuration for dataset: {ACTIVE_DATASET.upper()}")
+    logger.info(f"📁 Results directory: {RESULTS_DIR}")
+    logger.info(f"📋 Validation CSV: {VAL_CSV}")
 
 class ForgeryValidator:
     """Validation on held-out validation set"""
@@ -422,8 +459,17 @@ class ForgeryValidator:
 
 def main():
     """Main validation function"""
+    
+    # Parse command line arguments
+    args = parse_arguments()
+    
+    # Update configuration for selected dataset
+    update_config_for_dataset(args.dataset)
+    
     print("=" * 80)
     print(" IMAGE FORGERY DETECTION - VALIDATION SET EVALUATION")
+    print("=" * 80)
+    print(f"📊 Dataset: {args.dataset.upper()}")
     print("=" * 80)
     
     # Create results directory if it doesn't exist

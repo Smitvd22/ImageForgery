@@ -126,40 +126,32 @@ USE_ADVANCED_FUSION = True  # Advanced feature fusion techniques
 
 # State-of-the-Art ImageNet Models Configuration - Enhanced for Forgery Detection
 IMAGENET_MODELS = {
-    'resnet152': {
+    'efficientnet_b4': {
         'enabled': True,
         'pretrained': True,
-        'feature_dim': 2048,
-        'input_size': (384, 384),
-        'forgery_specific': True  # Add forgery-specific layers
-    },
-    'efficientnet_b7': {
-        'enabled': True, 
-        'pretrained': True,
-        'feature_dim': 2560,
-        'input_size': (384, 384),
+        'feature_dim': 1792,
+        'input_size': (380, 380),
         'forgery_specific': True
     },
     'convnext_base': {
         'enabled': True,
         'pretrained': True,
         'feature_dim': 1024,
-        'input_size': (384, 384),
+        'input_size': (224, 224),
         'forgery_specific': True
     },
-    # Add specialized forgery detection models
     'swin_base_patch4_window7_224': {
         'enabled': True,
         'pretrained': True,
         'feature_dim': 1024,
-        'input_size': (384, 384),
+        'input_size': (224, 224),
         'forgery_specific': True
     },
     'vit_base_patch16_224': {
-        'enabled': True,
+        'enabled': False, # Keep disabled for now, can be enabled for further experiments
         'pretrained': True,
         'feature_dim': 768,
-        'input_size': (384, 384),
+        'input_size': (224, 224),
         'forgery_specific': True
     }
 }
@@ -297,12 +289,12 @@ ENSEMBLE_CONFIG = {
 
 # Advanced Cross-Validation Configuration
 CV_CONFIG = {
-    'cv_folds': 15,  # More folds for better validation
+    'cv_folds': 20,  # More folds for better validation
     'stratified': True,
     'shuffle': True,
     'random_state': RANDOM_SEED,
     'repeated_cv': True,
-    'n_repeats': 3
+    'n_repeats': 5
 }
 
 # Model Paths
