@@ -85,7 +85,7 @@ def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description='Enhanced Image Forgery Detection Training')
     parser.add_argument('--dataset', choices=['4cam', 'misd', 'imsplice'], 
-                      default='imsplice', help='Dataset to use for training')
+                      default=None, help='Dataset to use for training (overrides config file)')
     parser.add_argument('--model-type', choices=['basic', 'advanced'], 
                       default='advanced', help='Model complexity level')
     parser.add_argument('--enhanced-training', action='store_true', 
@@ -1070,13 +1070,21 @@ def main():
     # Parse command line arguments
     args = parse_arguments()
     
+    # Use dataset from config file if not specified in command line
+    if args.dataset is None:
+        dataset_to_use = ACTIVE_DATASET
+        logger.info(f"📋 Using dataset from config file: {dataset_to_use.upper()}")
+    else:
+        dataset_to_use = args.dataset
+        logger.info(f"📋 Using dataset from command line: {dataset_to_use.upper()}")
+    
     # Update configuration for selected dataset
-    update_config_for_dataset(args.dataset)
+    update_config_for_dataset(dataset_to_use)
     
     print("=" * 80)
     print("🚀 ENHANCED IMAGE FORGERY DETECTION - EPOCH-BASED TRAINING")
     print("=" * 80)
-    print(f"📊 Dataset: {args.dataset.upper()}")
+    print(f"📊 Dataset: {dataset_to_use.upper()}")
     print(f"🔧 Model Type: {args.model_type.upper()}")
     print(f"⚡ Enhanced Training: {'Yes' if args.enhanced_training else 'No'}")
     print("=" * 80)

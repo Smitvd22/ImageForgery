@@ -24,7 +24,7 @@ if GPU_AVAILABLE:
 
 # Dataset Selection Configuration
 # Change this to switch between datasets: "4cam", "misd", or "imsplice"
-ACTIVE_DATASET = "imsplice"  # Options: "4cam", "misd"
+ACTIVE_DATASET = "4cam"  # Options: "4cam", "misd"
 
 # Dataset Configuration
 DATA_ROOT = "./data"

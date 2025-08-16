@@ -43,7 +43,7 @@ def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description='Image Forgery Detection Validation')
     parser.add_argument('--dataset', choices=['4cam', 'misd', 'imsplice'], 
-                      default='imsplice', help='Dataset to use for validation')
+                      default=None, help='Dataset to use for validation (overrides config file)')
     return parser.parse_args()
 
 def update_config_for_dataset(dataset_name):
@@ -463,13 +463,21 @@ def main():
     # Parse command line arguments
     args = parse_arguments()
     
+    # Use dataset from config file if not specified in command line
+    if args.dataset is None:
+        dataset_to_use = ACTIVE_DATASET
+        logger.info(f"📋 Using dataset from config file: {dataset_to_use.upper()}")
+    else:
+        dataset_to_use = args.dataset
+        logger.info(f"📋 Using dataset from command line: {dataset_to_use.upper()}")
+    
     # Update configuration for selected dataset
-    update_config_for_dataset(args.dataset)
+    update_config_for_dataset(dataset_to_use)
     
     print("=" * 80)
     print(" IMAGE FORGERY DETECTION - VALIDATION SET EVALUATION")
     print("=" * 80)
-    print(f"📊 Dataset: {args.dataset.upper()}")
+    print(f"📊 Dataset: {dataset_to_use.upper()}")
     print("=" * 80)
     
     # Create results directory if it doesn't exist
