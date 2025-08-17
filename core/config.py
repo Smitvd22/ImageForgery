@@ -24,7 +24,7 @@ if GPU_AVAILABLE:
 
 # Dataset Selection Configuration
 # Change this to switch between datasets: "4cam", "misd", or "imsplice"
-ACTIVE_DATASET = "4cam"  # Options: "4cam", "misd"
+ACTIVE_DATASET = "imsplice"  # Options: "4cam", "misd"
 
 # Dataset Configuration
 DATA_ROOT = "./data"
@@ -82,10 +82,10 @@ FEATURE_SELECTOR_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}feature_selecto
 RFE_SELECTOR_PATH = os.path.join(MODELS_DIR, f"{MODEL_PREFIX}rfe_selector.pkl")
 
 # Enhanced Model Configuration for Maximum Performance
-BATCH_SIZE = 8  # Optimized for stability
-IMAGE_SIZE = (384, 384)  # Standardized resolution for compatibility
-NUM_EPOCHS = 150  # More epochs for better convergence
-LEARNING_RATE = 0.00005  # Very low learning rate for stability
+IMAGE_SIZE = (448, 448)  # Higher resolution for ImSplice
+BATCH_SIZE = 6  # Lower batch size for stability
+NUM_EPOCHS = 250  # More epochs for deeper convergence
+LEARNING_RATE = 0.00003  # Lower LR for fine-tuning
 
 # Enhanced Training Configuration for Better Generalization
 TRAIN_SPLIT = 0.7
@@ -94,15 +94,16 @@ TEST_SPLIT = 0.15
 RANDOM_SEED = 42
 
 # Advanced Training Parameters to Prevent Overfitting
-EARLY_STOPPING_PATIENCE = 15
-MIN_DELTA = 0.001
-REDUCE_LR_PATIENCE = 8
-REDUCE_LR_FACTOR = 0.5
+DROPOUT_RATE = 0.5  # Increased dropout for overfitting prevention
+EARLY_STOPPING_PATIENCE = 30  # More patience for deeper models
+MIN_DELTA = 0.0005  # More sensitive stopping
+REDUCE_LR_PATIENCE = 12  # More patience for LR reduction
+REDUCE_LR_FACTOR = 0.3  # More aggressive LR reduction
 MIN_LR = 1e-7
 
 # Cross-Validation Configuration
-CV_FOLDS = 5
-CV_REPEATS = 2
+CV_FOLDS = 7  # More folds for robust validation
+CV_REPEATS = 3
 
 # Regularization Parameters
 DROPOUT_RATE = 0.3
@@ -148,10 +149,17 @@ IMAGENET_MODELS = {
         'forgery_specific': True
     },
     'vit_base_patch16_224': {
-        'enabled': False, # Keep disabled for now, can be enabled for further experiments
+        'enabled': True, # Enable ViT for deeper features
         'pretrained': True,
         'feature_dim': 768,
         'input_size': (224, 224),
+        'forgery_specific': True
+    },
+    'swin_large_patch4_window12_384': {
+        'enabled': True, # Enable Swin-Large for deeper features
+        'pretrained': True,
+        'feature_dim': 1536,
+        'input_size': (384, 384),
         'forgery_specific': True
     }
 }

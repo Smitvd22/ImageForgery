@@ -16,31 +16,36 @@ def get_advanced_augmentation_pipeline(image_size=(384, 384), p=0.5):
     Designed to improve generalization while preserving forgery traces
     """
     return A.Compose([
-        # Geometric transformations (light)
-        A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=5, p=p),
-        A.HorizontalFlip(p=0.3),
-        
-        # Optical & perspective transformations (very light to preserve forgery traces)
-        A.OpticalDistortion(distort_limit=0.05, shift_limit=0.02, p=0.2),
-        A.Perspective(scale=(0.02, 0.05), p=0.2),
-        
-        # Color & lighting augmentations (preserve forgery color inconsistencies)
-        A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=p),
-        A.HueSaturationValue(hue_shift_limit=5, sat_shift_limit=10, val_shift_limit=10, p=0.3),
-        A.RandomGamma(gamma_limit=(95, 105), p=0.3),
-        
-        # Noise & quality degradation (simulate real-world conditions)
-        A.GaussNoise(var_limit=(5.0, 15.0), p=0.2),
-        A.ISONoise(color_shift=(0.01, 0.03), intensity=(0.05, 0.15), p=0.2),
-        A.MultiplicativeNoise(multiplier=(0.98, 1.02), p=0.1),
-        
-        # Compression artifacts (common in forgeries)
-        A.ImageCompression(quality_lower=85, quality_upper=100, p=0.3),
-        
-        # Edge-preserving blur (preserve forgery boundaries)
-        A.MotionBlur(blur_limit=3, p=0.1),
-        A.GaussianBlur(blur_limit=3, p=0.1),
-        
+        # Resize for consistency
+        A.Resize(height=image_size[0], width=image_size[1]),
+        # Strong geometric transformations
+        A.ShiftScaleRotate(shift_limit=0.12, scale_limit=0.12, rotate_limit=15, p=0.7),
+        A.HorizontalFlip(p=0.5),
+        A.VerticalFlip(p=0.2),
+        A.RandomResizedCrop(height=image_size[0], width=image_size[1], scale=(0.8, 1.0), p=0.5),
+        # Perspective and elastic transforms
+        A.OpticalDistortion(distort_limit=0.12, shift_limit=0.05, p=0.4),
+        A.Perspective(scale=(0.05, 0.12), p=0.4),
+        A.ElasticTransform(alpha=1.0, sigma=50, alpha_affine=30, p=0.3),
+        # Color and lighting
+        A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.7),
+        A.HueSaturationValue(hue_shift_limit=15, sat_shift_limit=25, val_shift_limit=25, p=0.5),
+        A.RandomGamma(gamma_limit=(80, 120), p=0.5),
+        A.CLAHE(clip_limit=3.0, tile_grid_size=(12, 12), p=0.4),
+        # Noise and degradation
+        A.GaussNoise(var_limit=(10.0, 30.0), p=0.4),
+        A.ISONoise(color_shift=(0.03, 0.08), intensity=(0.15, 0.35), p=0.4),
+        A.MultiplicativeNoise(multiplier=(0.95, 1.05), p=0.2),
+        # Compression artifacts
+        A.ImageCompression(quality_lower=65, quality_upper=100, p=0.5),
+        # Blurs
+        A.MotionBlur(blur_limit=5, p=0.2),
+        A.GaussianBlur(blur_limit=5, p=0.2),
+        A.MedianBlur(blur_limit=3, p=0.1),
+        # Dropouts and cutouts
+        A.CoarseDropout(max_holes=5, max_height=48, max_width=48, p=0.2),
+        A.GridDropout(ratio=0.2, p=0.2),
+        A.Cutout(num_holes=4, max_h_size=32, max_w_size=32, p=0.2),
         # Normalization and tensor conversion
         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ToTensorV2()

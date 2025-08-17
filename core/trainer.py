@@ -81,6 +81,7 @@ class EnhancedForgeryTrainer:
         """
         Extracts a rich set of features designed to capture forgery artifacts,
         with added robustness against common image variations.
+        Includes patch-based, frequency domain, and color inconsistency features.
         """
         try:
             # Ensure image is in RGB format
@@ -139,12 +140,10 @@ class EnhancedForgeryTrainer:
             block_size = 8
             h, w = gray.shape
             block_variance = []
-
             for i in range(0, h - block_size, block_size):
                 for j in range(0, w - block_size, block_size):
                     block = gray[i:i+block_size, j:j+block_size]
                     block_variance.append(np.var(block))
-
             if block_variance:
                 features.extend([
                     np.mean(block_variance),
@@ -154,11 +153,66 @@ class EnhancedForgeryTrainer:
             else:
                 features.extend([0, 0, 0])
 
+            # 6. Patch-based features (mean, std, color inconsistency)
+            patch_size = 32
+            for i in range(0, h - patch_size, patch_size):
+                for j in range(0, w - patch_size, patch_size):
+                    patch = noise_suppressed[i:i+patch_size, j:j+patch_size, :]
+                    for ch in range(3):
+                        features.append(np.mean(patch[:,:,ch]))
+                        features.append(np.std(patch[:,:,ch]))
+                    # Color inconsistency (mean diff between channels)
+                    features.append(np.mean(np.abs(patch[:,:,0] - patch[:,:,1])))
+                    features.append(np.mean(np.abs(patch[:,:,1] - patch[:,:,2])))
+                    features.append(np.mean(np.abs(patch[:,:,0] - patch[:,:,2])))
+
+            # 7. Multi-scale frequency domain features
+            for scale in [1, 2, 4]:
+                scaled_gray = cv2.resize(gray, (gray.shape[1]//scale, gray.shape[0]//scale))
+                f_transform = np.fft.fft2(scaled_gray)
+                f_shift = np.fft.fftshift(f_transform)
+                magnitude_spectrum = np.log(np.abs(f_shift) + 1)
+                features.extend([
+                    np.mean(magnitude_spectrum),
+                    np.std(magnitude_spectrum)
+                ])
+
+                # 8. Higher-order statistics (entropy, energy, contrast)
+                entropy = -np.sum(gray/255.0 * np.log2(gray/255.0 + 1e-12))
+                energy = np.sum(gray**2)
+                contrast = np.std(gray)
+                features.extend([entropy, energy, contrast])
+
+                # 9. GLCM texture features
+                try:
+                    import skimage.feature
+                    glcm = skimage.feature.greycomatrix(gray, [1], [0], 256, symmetric=True, normed=True)
+                    contrast_glcm = skimage.feature.greycoprops(glcm, 'contrast')[0, 0]
+                    dissimilarity_glcm = skimage.feature.greycoprops(glcm, 'dissimilarity')[0, 0]
+                    homogeneity_glcm = skimage.feature.greycoprops(glcm, 'homogeneity')[0, 0]
+                    ASM_glcm = skimage.feature.greycoprops(glcm, 'ASM')[0, 0]
+                    energy_glcm = skimage.feature.greycoprops(glcm, 'energy')[0, 0]
+                    features.extend([contrast_glcm, dissimilarity_glcm, homogeneity_glcm, ASM_glcm, energy_glcm])
+                except Exception as e:
+                    features.extend([0, 0, 0, 0, 0])
+
+                # 10. Advanced frequency features (high/low band ratios)
+                f_transform = np.fft.fft2(gray)
+                f_shift = np.fft.fftshift(f_transform)
+                magnitude_spectrum = np.abs(f_shift)
+                center = magnitude_spectrum[magnitude_spectrum.shape[0]//4:magnitude_spectrum.shape[0]*3//4,
+                                            magnitude_spectrum.shape[1]//4:magnitude_spectrum.shape[1]*3//4]
+                high_band = magnitude_spectrum - center
+                features.extend([
+                    np.mean(center), np.std(center), np.mean(high_band), np.std(high_band),
+                    np.mean(center)/np.mean(high_band + 1e-6)
+                ])
+
             return np.array(features, dtype=np.float32)
 
         except Exception as e:
             logger.warning(f"Feature extraction error: {e}")
-            return np.zeros(50, dtype=np.float32)  # Fallback features
+            return np.zeros(100, dtype=np.float32)  # Fallback features
 
     def train_ensemble_with_regularization(self, features, labels, feature_names):
         """
@@ -189,6 +243,11 @@ class EnhancedForgeryTrainer:
         scaler = StandardScaler()
         features_scaled = scaler.fit_transform(features_final)
 
+        # Handle class imbalance with class weights
+        from sklearn.utils.class_weight import compute_class_weight
+        class_weights = compute_class_weight('balanced', classes=np.unique(labels), y=labels)
+        class_weight_dict = {i: w for i, w in enumerate(class_weights)}
+
         # Enhanced models with regularization
         models = {}
 
@@ -198,9 +257,9 @@ class EnhancedForgeryTrainer:
         best_lgb_params = optimize_lightgbm(features_scaled, labels)
         best_rf_params = optimize_random_forest(features_scaled, labels)
 
-        models['xgboost'] = xgb.XGBClassifier(**best_xgb_params)
-        models['lightgbm'] = lgb.LGBMClassifier(**best_lgb_params)
-        models['random_forest'] = RandomForestClassifier(**best_rf_params)
+        models['xgboost'] = xgb.XGBClassifier(**best_xgb_params, scale_pos_weight=class_weights[1]/class_weights[0])
+        models['lightgbm'] = lgb.LGBMClassifier(**best_lgb_params, class_weight=class_weight_dict)
+        models['random_forest'] = RandomForestClassifier(**best_rf_params, class_weight=class_weight_dict)
 
         # 4. Extra Trees with regularization
         et_params = {
@@ -219,6 +278,25 @@ class EnhancedForgeryTrainer:
         }
         models['mlp'] = MLPClassifier(**mlp_params)
 
+        # Add CNN/Transformer models as scikit-learn wrappers
+        if TIMM_AVAILABLE and hasattr(self, 'cnn_models') and self.cnn_models:
+            from sklearn.base import BaseEstimator, ClassifierMixin
+            class TimmWrapper(BaseEstimator, ClassifierMixin):
+                def __init__(self, timm_model, feature_dim):
+                    self.timm_model = timm_model
+                    self.feature_dim = feature_dim
+                def fit(self, X, y):
+                    return self  # Pretrained, no fitting
+                def predict(self, X):
+                    import torch
+                    X_tensor = torch.tensor(X.transpose(0,3,1,2), dtype=torch.float32).to('cuda')
+                    with torch.no_grad():
+                        logits = self.timm_model(X_tensor)
+                        preds = torch.argmax(logits, dim=1).cpu().numpy()
+                    return preds
+            for model_name, timm_model in self.cnn_models.items():
+                models[model_name] = TimmWrapper(timm_model, feature_dim=None)
+
         # Train models with cross-validation
         trained_models = {}
         cv_scores = {}
@@ -235,34 +313,72 @@ class EnhancedForgeryTrainer:
             except Exception as e:
                 logger.warning(f"     Failed to train {name}: {e}")
 
-        # Create and train stacking ensemble
+            # Model calibration (Platt scaling)
+            from sklearn.calibration import CalibratedClassifierCV
+            calibrated_models = {}
+            for name, model in trained_models.items():
+                try:
+                    calibrated = CalibratedClassifierCV(model, method='sigmoid', cv=skf)
+                    calibrated.fit(features_scaled, labels)
+                    calibrated_models[name] = calibrated
+                    logger.info(f"   Calibrated {name} with Platt scaling.")
+                except Exception as e:
+                    logger.warning(f"   Calibration failed for {name}: {e}")
+            trained_models.update(calibrated_models)
+
+        # Create and train advanced stacking/blending meta-ensembles
         if len(trained_models) > 1:
             ensemble_models = list(trained_models.items())
-            
-            # Define the stacking classifier
-            stacking_ensemble = StackingClassifier(
+
+            # 1. Logistic Regression meta-learner
+            stacking_lr = StackingClassifier(
                 estimators=ensemble_models,
                 final_estimator=LogisticRegression(),
-                cv=skf  # Use the same stratified k-fold for inner cross-validation
+                cv=skf
             )
-
-            # Train ensemble
-            stacking_ensemble.fit(features_scaled, labels)
-            trained_models['stacking_ensemble'] = stacking_ensemble
-
-            # Cross-validate ensemble
-            ensemble_cv = cross_val_score(
-                stacking_ensemble, features_scaled, labels,
-                cv=skf, scoring='accuracy', n_jobs=-1
-            )
-
-            cv_scores['stacking_ensemble'] = {
-                'mean': ensemble_cv.mean(),
-                'std': ensemble_cv.std(),
-                'scores': ensemble_cv.tolist()
+            stacking_lr.fit(features_scaled, labels)
+            trained_models['stacking_lr'] = stacking_lr
+            stacking_lr_cv = cross_val_score(stacking_lr, features_scaled, labels, cv=skf, scoring='accuracy', n_jobs=-1)
+            cv_scores['stacking_lr'] = {
+                'mean': stacking_lr_cv.mean(),
+                'std': stacking_lr_cv.std(),
+                'scores': stacking_lr_cv.tolist()
             }
+            logger.info(f"   Stacking LR Ensemble CV Accuracy: {stacking_lr_cv.mean():.4f} ± {stacking_lr_cv.std():.4f}")
 
-            logger.info(f"   Stacking Ensemble CV Accuracy: {ensemble_cv.mean():.4f} ± {ensemble_cv.std():.4f}")
+            # 2. XGBoost meta-learner
+            if XGB_AVAILABLE:
+                stacking_xgb = StackingClassifier(
+                    estimators=ensemble_models,
+                    final_estimator=xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss'),
+                    cv=skf
+                )
+                stacking_xgb.fit(features_scaled, labels)
+                trained_models['stacking_xgb'] = stacking_xgb
+                stacking_xgb_cv = cross_val_score(stacking_xgb, features_scaled, labels, cv=skf, scoring='accuracy', n_jobs=-1)
+                cv_scores['stacking_xgb'] = {
+                    'mean': stacking_xgb_cv.mean(),
+                    'std': stacking_xgb_cv.std(),
+                    'scores': stacking_xgb_cv.tolist()
+                }
+                logger.info(f"   Stacking XGB Ensemble CV Accuracy: {stacking_xgb_cv.mean():.4f} ± {stacking_xgb_cv.std():.4f}")
+
+            # 3. LightGBM meta-learner
+            if LIGHTGBM_AVAILABLE:
+                stacking_lgb = StackingClassifier(
+                    estimators=ensemble_models,
+                    final_estimator=lgb.LGBMClassifier(),
+                    cv=skf
+                )
+                stacking_lgb.fit(features_scaled, labels)
+                trained_models['stacking_lgb'] = stacking_lgb
+                stacking_lgb_cv = cross_val_score(stacking_lgb, features_scaled, labels, cv=skf, scoring='accuracy', n_jobs=-1)
+                cv_scores['stacking_lgb'] = {
+                    'mean': stacking_lgb_cv.mean(),
+                    'std': stacking_lgb_cv.std(),
+                    'scores': stacking_lgb_cv.tolist()
+                }
+                logger.info(f"   Stacking LGB Ensemble CV Accuracy: {stacking_lgb_cv.mean():.4f} ± {stacking_lgb_cv.std():.4f}")
 
         # Find best model
         best_model_name = max(cv_scores, key=lambda k: cv_scores[k]['mean'])
@@ -286,8 +402,12 @@ class EnhancedForgeryTrainer:
         self.cnn_models = {}
         model_configs = [
             ('efficientnet_v2_s.in1k', 1280),
+            ('efficientnet_v2_l.in1k', 1280),
             ('resnet50.a1_in1k', 2048),
-            ('convnext_tiny.fb_in22k_ft_in1k', 768)
+            ('convnext_tiny.fb_in22k_ft_in1k', 768),
+            ('convnext_large.fb_in22k_ft_in1k', 1536),
+            ('swin_large_patch4_window12_384.ms_in22k_ft_in1k', 1536),
+            ('vit_base_patch16_384', 768)
         ]
 
         for model_name, feature_dim in model_configs:
