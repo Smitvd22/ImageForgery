@@ -24,7 +24,7 @@ if GPU_AVAILABLE:
 
 # Dataset Selection Configuration
 # Change this to switch between datasets: "4cam", "misd", or "imsplice"
-ACTIVE_DATASET = "imsplice"  # Options: "4cam", "misd"
+ACTIVE_DATASET = "micc-f220"  # Options: "4cam", "misd"
 
 # Dataset Configuration
 DATA_ROOT = "./data"
@@ -56,6 +56,14 @@ DATASETS = {
         "results_dir": "./results_imsplice",
         "authentic_subdirs": ["Au-S", "Au-SS-H", "Au-SS-O", "Au-SS-V", "Au-T", "Au-TS-H", "Au-TS-O", "Au-TS-V", "Au-TT-H", "Au-TT-O", "Au-TT-V"],
         "forged_subdirs": ["Sp-S", "Sp-SS-H", "Sp-SS-O", "Sp-SS-V", "Sp-T", "Sp-TS-H", "Sp-TS-O", "Sp-TS-V", "Sp-TT-H", "Sp-TT-O", "Sp-TT-V"]
+    },
+    "micc-f220": {
+        "name": "MICC-F220 Copy-Move Dataset",
+        "authentic_dir": os.path.join(DATA_ROOT, "MICC-F220"),
+        "forged_dir": os.path.join(DATA_ROOT, "MICC-F220"),
+        "file_extensions": ["*.jpg", "*.JPG", "*.png"],
+        "description": "MICC-F220 copy-move forgery dataset",
+        "results_dir": "./results_micc-f220"
     }
 }
 

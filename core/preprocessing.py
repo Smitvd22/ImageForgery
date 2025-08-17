@@ -874,30 +874,33 @@ def preprocess_image(image_path, size=(256, 256), apply_augmentation=False, comp
     img = cv2.imread(image_path)
     if img is None:
         raise ValueError(f"Could not load image from {image_path}")
-    
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    
-    # Step 1: Brightness & contrast adjustment with adaptive enhancement
-    # Initial brightness/contrast adjustment - more conservative
-    img = cv2.convertScaleAbs(img, alpha=1.1, beta=5)  # Reduced parameters
-    img = img.astype(np.float32) / 255.0
-    
-    # Step 2: Apply comprehensive noise suppression if enabled
-    if comprehensive_noise_suppression:
-        img = apply_comprehensive_noise_suppression(img, preserve_edges=True)
-    
-    # Step 3: Apply lighter adaptive contrast enhancement
-    img = enhance_contrast_adaptive(img)
-    
-    # Step 4: Apply conservative sparkle noise suppression (for remaining sensor noise)
-    img = apply_sparkle_noise_suppression(img)
-    
-    # Step 5: Normalize resolution and resize image with high-quality interpolation
-    img = cv2.resize(img, size, interpolation=cv2.INTER_LANCZOS4)
-    
-    # Additional preprocessing for training augmentation
-    if apply_augmentation:
-        img = apply_training_augmentations(img, size)
+
+    # Detect if MICC-F220 (copy-move) dataset is active
+    from .config import ACTIVE_DATASET
+    if ACTIVE_DATASET == "micc-f220":
+        # Custom preprocessing for copy-move forgery
+        # Example: skip sparkle noise suppression, use block-based smoothing, etc.
+        img = cv2.convertScaleAbs(img, alpha=1.1, beta=5)
+        img = img.astype(np.float32) / 255.0
+        if comprehensive_noise_suppression:
+            img = apply_comprehensive_noise_suppression(img, preserve_edges=True)
+        # Block-based smoothing (example for copy-move)
+        img = cv2.blur(img, (5, 5))
+        img = cv2.resize(img, size, interpolation=cv2.INTER_LANCZOS4)
+        if apply_augmentation:
+            img = apply_training_augmentations(img, size)
+    else:
+        # Default preprocessing for splicing datasets
+        img = cv2.convertScaleAbs(img, alpha=1.1, beta=5)  # Reduced parameters
+        img = img.astype(np.float32) / 255.0
+        if comprehensive_noise_suppression:
+            img = apply_comprehensive_noise_suppression(img, preserve_edges=True)
+        img = enhance_contrast_adaptive(img)
+        img = apply_sparkle_noise_suppression(img)
+        img = cv2.resize(img, size, interpolation=cv2.INTER_LANCZOS4)
+        if apply_augmentation:
+            img = apply_training_augmentations(img, size)
     
     # Final normalization to [0, 1] range
     img = np.clip(img, 0, 1)

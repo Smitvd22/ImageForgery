@@ -1,0 +1,9 @@
+{
+  "best_model": "random_forest",
+  "accuracy": 0.9696969696969697,
+  "f1_score": 0.9696969696969697,
+  "precision": 0.9714795008912657,
+  "recall": 0.9696969696969697,
+  "roc_auc": 0.9963235294117647,
+  "total_samples": 33
+}

@@ -22,7 +22,7 @@ def switch_dataset(target_dataset):
         content = f.read()
     
     # Available datasets
-    valid_datasets = ["4cam", "misd", "imsplice"]
+    valid_datasets = ["4cam", "misd", "imsplice", "micc-f220"]
     
     if target_dataset not in valid_datasets:
         print(f"Error: Invalid dataset '{target_dataset}'. Valid options: {valid_datasets}")
@@ -116,7 +116,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="Dataset Management Utility")
-    parser.add_argument("--switch", choices=["4cam", "misd", "imsplice"], 
+    parser.add_argument("--switch", choices=["4cam", "misd", "imsplice", "micc-f220"], 
                        help="Switch to specified dataset")
     parser.add_argument("--show", action="store_true",
                        help="Show current dataset configuration")
@@ -127,6 +127,8 @@ def main():
                        help="Run specified phases (default: all)")
     parser.add_argument("--full-test", action="store_true",
                        help="Test both datasets (switch and run all phases for each)")
+    parser.add_argument("--create-splits", action="store_true",
+                       help="Create train/val/test splits for the active dataset")
     
     args = parser.parse_args()
     
@@ -140,29 +142,41 @@ def main():
         success = switch_dataset(args.switch)
         if success:
             show_current_dataset()
-    
+
+    elif args.create_splits:
+        # Import split creation from core.dataset
+        sys.path.append('.')
+        try:
+            from core.config import AUTHENTIC_DIR, FORGED_DIR
+            from core.dataset import create_dataset_splits
+            print("🚀 Creating train/val/test splits for active dataset...")
+            create_dataset_splits(authentic_dir=AUTHENTIC_DIR, forged_dir=FORGED_DIR)
+            print("✅ Splits created successfully!")
+        except Exception as e:
+            print(f"❌ Error creating splits: {e}")
+
     elif args.show:
         show_current_dataset()
-    
+
     elif args.list:
         list_available_datasets()
-    
+
     elif args.run is not None:
         phases = args.run if args.run else ["train", "validate", "test"]
         current = show_current_dataset()
         if current:
             print(f"\n🚀 Running pipeline for {current.upper()} dataset...")
             run_pipeline(phases)
-    
+
     elif args.full_test:
         print("🔄 Running full test on both datasets...")
-        
-        datasets = ["4cam", "misd", "imsplice"]
+
+        datasets = ["4cam", "misd", "imsplice", "micc-f220"]
         for dataset in datasets:
             print(f"\n{'='*80}")
             print(f"TESTING {dataset.upper()} DATASET")
             print(f"{'='*80}")
-            
+
             # Switch dataset
             if switch_dataset(dataset):
                 # Run full pipeline

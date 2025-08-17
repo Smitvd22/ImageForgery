@@ -39,8 +39,49 @@ class ForgeryDataset(Dataset):
         # Get file extensions for current dataset
         file_extensions = CURRENT_DATASET["file_extensions"]
         
+        # Handle MICC-F220 copy-move dataset
+        if ACTIVE_DATASET == "micc-f220":
+            # Parse groundtruthDB_220.txt for labels
+            groundtruth_path = os.path.join(authentic_dir, "groundtruthDB_220.txt")
+            if not os.path.exists(groundtruth_path):
+                groundtruth_path = os.path.join(forged_dir, "groundtruthDB_220.txt")
+            if not os.path.exists(groundtruth_path):
+                logger.error(f"MICC-F220 groundtruth file not found: {groundtruth_path}")
+                return pd.DataFrame([])
+
+            # Read groundtruth file
+            with open(groundtruth_path, "r") as f:
+                lines = f.readlines()
+
+            for line in lines:
+                parts = line.strip().split()
+                if len(parts) != 2:
+                    continue
+                filename, label = parts
+                label = int(label)
+                # Determine file path
+                # Try authentic_dir first, then forged_dir
+                file_path = os.path.join(authentic_dir, filename)
+                if not os.path.exists(file_path):
+                    file_path = os.path.join(forged_dir, filename)
+                if not os.path.exists(file_path):
+                    # Try both as fallback
+                    file_path = os.path.join(authentic_dir, filename)
+                if not os.path.exists(file_path):
+                    logger.warning(f"File not found for MICC-F220: {filename}")
+                    continue
+                category = "authentic" if label == 0 else "forged"
+                data.append({
+                    'filename': filename,
+                    'filepath': file_path,
+                    'label': label,
+                    'category': category
+                })
+            logger.info(f"MICC-F220: Found {len([d for d in data if d['label'] == 0])} authentic images")
+            logger.info(f"MICC-F220: Found {len([d for d in data if d['label'] == 1])} forged images")
+
         # Handle ImSpliceDataset with multiple subdirectories
-        if ACTIVE_DATASET == "imsplice":
+        elif ACTIVE_DATASET == "imsplice":
             # Process authentic subdirectories
             authentic_subdirs = CURRENT_DATASET.get("authentic_subdirs", [])
             for subdir in authentic_subdirs:
