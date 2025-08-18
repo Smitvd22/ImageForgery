@@ -1,5 +1,5 @@
 {
-  "validation_time": "2025-08-18T00:45:11.292431",
+  "validation_time": "2025-08-18T14:28:20.791790",
   "dataset_info": {
     "active_dataset": "micc-f220",
     "dataset_name": "MICC-F220 Copy-Move Dataset",
@@ -25,30 +25,30 @@
       ]
     ],
     "roc_auc": 0.9411764705882353,
-    "validation_time": 0.2055661678314209,
-    "predictions_per_second": 160.53225269569836,
-    "optimized_threshold": 0.38
+    "validation_time": 0.1796877384185791,
+    "predictions_per_second": 183.65193023425527,
+    "optimized_threshold": 0.4
   },
   "all_results": {
     "xgboost": {
-      "accuracy": 0.9393939393939394,
-      "precision": 0.8947368421052632,
-      "recall": 1.0,
-      "f1_score": 0.9444444444444444,
+      "accuracy": 0.9090909090909091,
+      "precision": 0.8888888888888888,
+      "recall": 0.9411764705882353,
+      "f1_score": 0.9142857142857143,
       "confusion_matrix": [
         [
           14,
           2
         ],
         [
-          0,
-          17
+          1,
+          16
         ]
       ],
       "roc_auc": 0.9301470588235294,
-      "validation_time": 0.016787290573120117,
-      "predictions_per_second": 1965.7728479925013,
-      "optimized_threshold": 0.3600000000000001
+      "validation_time": 0.02338266372680664,
+      "predictions_per_second": 1411.3019964516589,
+      "optimized_threshold": 0.4
     },
     "lightgbm": {
       "accuracy": 0.5151515151515151,
@@ -66,8 +66,8 @@
         ]
       ],
       "roc_auc": 0.5,
-      "validation_time": 1.4394285678863525,
-      "predictions_per_second": 22.92576424855662,
+      "validation_time": 1.4196717739105225,
+      "predictions_per_second": 23.244809544322102,
       "optimized_threshold": 0.1
     },
     "random_forest": {
@@ -86,9 +86,9 @@
         ]
       ],
       "roc_auc": 0.9411764705882353,
-      "validation_time": 0.2055661678314209,
-      "predictions_per_second": 160.53225269569836,
-      "optimized_threshold": 0.38
+      "validation_time": 0.1796877384185791,
+      "predictions_per_second": 183.65193023425527,
+      "optimized_threshold": 0.4
     },
     "extra_trees": {
       "accuracy": 0.9696969696969697,
@@ -105,30 +105,30 @@
           17
         ]
       ],
-      "roc_auc": 0.9485294117647058,
-      "validation_time": 0.21042108535766602,
-      "predictions_per_second": 156.82838981610524,
-      "optimized_threshold": 0.32000000000000006
+      "roc_auc": 0.9816176470588235,
+      "validation_time": 0.21047425270080566,
+      "predictions_per_second": 156.78877381220738,
+      "optimized_threshold": 0.4
     },
     "mlp": {
-      "accuracy": 0.8484848484848485,
-      "precision": 0.7727272727272727,
+      "accuracy": 0.9393939393939394,
+      "precision": 0.8947368421052632,
       "recall": 1.0,
-      "f1_score": 0.8717948717948718,
+      "f1_score": 0.9444444444444444,
       "confusion_matrix": [
         [
-          11,
-          5
+          14,
+          2
         ],
         [
           0,
           17
         ]
       ],
-      "roc_auc": 0.9191176470588236,
-      "validation_time": 0.0054514408111572266,
-      "predictions_per_second": 6053.445528099715,
-      "optimized_threshold": 0.42000000000000004
+      "roc_auc": 0.9227941176470589,
+      "validation_time": 0.013793468475341797,
+      "predictions_per_second": 2392.43668544958,
+      "optimized_threshold": 0.4600000000000001
     },
     "voting_ensemble": {
       "accuracy": 0.9696969696969697,
@@ -146,8 +146,8 @@
         ]
       ],
       "roc_auc": 0.9411764705882353,
-      "validation_time": 0.3368098735809326,
-      "predictions_per_second": 97.9781253119065,
+      "validation_time": 0.4435560703277588,
+      "predictions_per_second": 74.3987112511281,
       "optimized_threshold": 0.4
     }
   },
