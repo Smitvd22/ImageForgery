@@ -24,7 +24,7 @@ if GPU_AVAILABLE:
 
 # Dataset Selection Configuration
 # Change this to switch between datasets: "4cam", "misd", or "imsplice"
-ACTIVE_DATASET = "micc-f220"  # Options: "4cam", "misd"
+ACTIVE_DATASET = "comofod"  # Options: "4cam", "misd"
 
 # Dataset Configuration
 DATA_ROOT = "./data"
@@ -64,6 +64,16 @@ DATASETS = {
         "file_extensions": ["*.jpg", "*.JPG", "*.png"],
         "description": "MICC-F220 copy-move forgery dataset",
         "results_dir": "./results_micc-f220"
+    },
+    "comofod": {
+        "name": "CoMoFoD_small_v2 Dataset",
+        "authentic_dir": os.path.join(DATA_ROOT, "CoMoFoD_small_v2"),
+        "forged_dir": os.path.join(DATA_ROOT, "CoMoFoD_small_v2"),
+        "file_extensions": ["*.png", "*.jpg"],
+        "description": "CoMoFoD_small_v2 dataset with original, forged, binary mask, and colored mask images. Splits based on image type and metadata in psnr.txt and readme.txt.",
+        "results_dir": "./results_comofod",
+        "psnr_file": os.path.join(DATA_ROOT, "CoMoFoD_small_v2", "psnr.txt"),
+        "readme_file": os.path.join(DATA_ROOT, "CoMoFoD_small_v2", "readme.txt")
     }
 }
 

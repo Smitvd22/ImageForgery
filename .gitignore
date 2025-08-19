@@ -70,6 +70,7 @@ results_4cam/
 results_misd/
 results_imsplice/
 results_micc-f220/
+results_comofod/
 outputs/
 predictions/
 *.backup

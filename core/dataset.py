@@ -80,6 +80,36 @@ class ForgeryDataset(Dataset):
             logger.info(f"MICC-F220: Found {len([d for d in data if d['label'] == 0])} authentic images")
             logger.info(f"MICC-F220: Found {len([d for d in data if d['label'] == 1])} forged images")
 
+        elif ACTIVE_DATASET == "comofod":
+            # All images are in a single folder (authentic_dir)
+            all_files = []
+            for ext in file_extensions:
+                all_files.extend(glob.glob(os.path.join(authentic_dir, ext)))
+            
+            for file_path in all_files:
+                filename = os.path.basename(file_path)
+                if filename.lower() in ['thumbs.db', '.ds_store']:
+                    continue
+                # Only use original and forged images for splits
+                # Example: 001_F_BC1 or 001_O_BC1
+                if "_O_" in filename or filename.endswith("_O") or "_O" in filename:
+                    data.append({
+                        'filename': filename,
+                        'filepath': file_path,
+                        'label': 0,
+                        'category': "authentic_comofod"
+                    })
+                elif "_F_" in filename or filename.endswith("_F") or "_F" in filename:
+                    data.append({
+                        'filename': filename,
+                        'filepath': file_path,
+                        'label': 1,
+                        'category': "forged_comofod"
+                    })
+                # Skip masks and other files
+            logger.info(f"CoMoFoD: Found {len([d for d in data if d['label'] == 0])} authentic images")
+            logger.info(f"CoMoFoD: Found {len([d for d in data if d['label'] == 1])} forged images")
+
         # Handle ImSpliceDataset with multiple subdirectories
         elif ACTIVE_DATASET == "imsplice":
             # Process authentic subdirectories
@@ -393,4 +423,3 @@ if __name__ == "__main__":
             logger.info(f"Batch shape: {images.shape}")
             logger.info(f"Labels: {labels}")
             break
-
