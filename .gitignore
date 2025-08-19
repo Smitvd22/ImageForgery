@@ -71,6 +71,7 @@ results_misd/
 results_imsplice/
 results_micc-f220/
 results_comofod/
+results_micc-f2000/
 outputs/
 predictions/
 *.backup

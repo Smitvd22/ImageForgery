@@ -39,9 +39,7 @@ class ForgeryDataset(Dataset):
         # Get file extensions for current dataset
         file_extensions = CURRENT_DATASET["file_extensions"]
         
-        # Handle MICC-F220 copy-move dataset
         if ACTIVE_DATASET == "micc-f220":
-            # Parse groundtruthDB_220.txt for labels
             groundtruth_path = os.path.join(authentic_dir, "groundtruthDB_220.txt")
             if not os.path.exists(groundtruth_path):
                 groundtruth_path = os.path.join(forged_dir, "groundtruthDB_220.txt")
@@ -79,6 +77,45 @@ class ForgeryDataset(Dataset):
                 })
             logger.info(f"MICC-F220: Found {len([d for d in data if d['label'] == 0])} authentic images")
             logger.info(f"MICC-F220: Found {len([d for d in data if d['label'] == 1])} forged images")
+            
+        elif ACTIVE_DATASET == "micc-f2000":
+            groundtruth_path = os.path.join(authentic_dir, "groundtruthDB_2000.txt")
+            if not os.path.exists(groundtruth_path):
+                groundtruth_path = os.path.join(forged_dir, "groundtruthDB_2000.txt")
+            if not os.path.exists(groundtruth_path):
+                logger.error(f"MICC-F2000 groundtruth file not found: {groundtruth_path}")
+                return pd.DataFrame([])
+
+            # Read groundtruth file
+            with open(groundtruth_path, "r") as f:
+                lines = f.readlines()
+
+            for line in lines:
+                parts = line.strip().split()
+                if len(parts) != 2:
+                    continue
+                filename, label = parts
+                label = int(label)
+                # Determine file path
+                # Try authentic_dir first, then forged_dir
+                file_path = os.path.join(authentic_dir, filename)
+                if not os.path.exists(file_path):
+                    file_path = os.path.join(forged_dir, filename)
+                if not os.path.exists(file_path):
+                    # Try both as fallback
+                    file_path = os.path.join(authentic_dir, filename)
+                if not os.path.exists(file_path):
+                    logger.warning(f"File not found for MICC-F2000: {filename}")
+                    continue
+                category = "authentic" if label == 0 else "forged"
+                data.append({
+                    'filename': filename,
+                    'filepath': file_path,
+                    'label': label,
+                    'category': category
+                })
+            logger.info(f"MICC-F2000: Found {len([d for d in data if d['label'] == 0])} authentic images")
+            logger.info(f"MICC-F2000: Found {len([d for d in data if d['label'] == 1])} forged images")
 
         elif ACTIVE_DATASET == "comofod":
             # All images are in a single folder (authentic_dir)

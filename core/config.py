@@ -24,7 +24,7 @@ if GPU_AVAILABLE:
 
 # Dataset Selection Configuration
 # Change this to switch between datasets: "4cam", "misd", or "imsplice"
-ACTIVE_DATASET = "comofod"  # Options: "4cam", "misd"
+ACTIVE_DATASET = "micc-f2000"  # Options: "4cam", "misd"
 
 # Dataset Configuration
 DATA_ROOT = "./data"
@@ -64,6 +64,14 @@ DATASETS = {
         "file_extensions": ["*.jpg", "*.JPG", "*.png"],
         "description": "MICC-F220 copy-move forgery dataset",
         "results_dir": "./results_micc-f220"
+    },
+    "micc-f2000": {
+        "name": "MICC-F2000 Copy-Move Dataset",
+        "authentic_dir": os.path.join(DATA_ROOT, "MICC-F2000"),
+        "forged_dir": os.path.join(DATA_ROOT, "MICC-F2000"),
+        "file_extensions": ["*.jpg", "*.JPG", "*.png"],
+        "description": "MICC-F2000 copy-move forgery dataset",
+        "results_dir": "./results_micc-f2000"
     },
     "comofod": {
         "name": "CoMoFoD_small_v2 Dataset",

@@ -878,7 +878,7 @@ def preprocess_image(image_path, size=(256, 256), apply_augmentation=False, comp
 
     # Detect if MICC-F220 (copy-move) dataset is active
     from .config import ACTIVE_DATASET
-    if ACTIVE_DATASET == "micc-f220":
+    if ACTIVE_DATASET == "micc-f220" or "micc-f2000":
         # Custom preprocessing for copy-move forgery
         # Example: skip sparkle noise suppression, use block-based smoothing, etc.
         img = cv2.convertScaleAbs(img, alpha=1.1, beta=5)
