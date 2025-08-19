@@ -47,6 +47,8 @@ data/**/*.png
 data/**/*.bmp
 data/Dataset
 data/MICC-F220
+data/CoMoFoD_small_v2
+data/MICC-F2000
 # Keep label files
 !data/**/*.csv
 !data/*.csv

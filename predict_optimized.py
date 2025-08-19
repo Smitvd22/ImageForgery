@@ -276,7 +276,8 @@ class OptimizedPredictor:
             probability = None
             if hasattr(self.model, 'predict_proba'):
                 prob = self.model.predict_proba(features)[0]
-                probability = prob[1] if len(prob) > 1 else prob[0]  # Probability of being forged
+                # Show confidence for the predicted class
+                probability = prob[prediction] if len(prob) > 1 else prob[0]
             
             return prediction, probability
             
@@ -341,7 +342,7 @@ def main():
     """Main prediction function"""
     parser = argparse.ArgumentParser(description='Image Forgery Detection Prediction - Multi-Dataset Support')
     parser.add_argument('input', nargs='?', help='Image file or directory path')
-    parser.add_argument('--dataset', '-d', choices=['4cam', 'misd', 'imsplice'], 
+    parser.add_argument('--dataset', '-d', choices=['4cam', 'misd', 'imsplice','micc-f220'], 
                        help='Dataset to use (4cam, misd, or imsplice). If not specified, uses current active dataset')
     parser.add_argument('--output', '-o', help='Output JSON file for batch results')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
