@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 🚀 Optimized Image Forgery Detection Prediction
 GPU-accelerated with CPU fallback, supports both 4CAM and MISD datasets
@@ -323,156 +322,229 @@ class OptimizedPredictor:
             prediction, probability = self.predict(str(image_path))
             
             if prediction is not None:
-                result = {
-                    'image': image_path.name,
-                    'path': str(image_path),
-                    'prediction': 'Forged' if prediction == 1 else 'Authentic',
-                    'label': int(prediction),
-                    'confidence': probability if probability is not None else 0.5,
-                    'dataset': self.dataset.upper()
-                }
-                results.append(result)
-                
-                print(f"📷 {image_path.name}: {result['prediction']} "
-                      f"(Confidence: {result['confidence']:.3f})")
+                    # Ensure all values are native Python types for JSON serialization
+                    result = {
+                        'image': str(image_path.name),
+                        'path': str(image_path),
+                        'prediction': 'Forged' if int(prediction) == 1 else 'Authentic',
+                        'label': int(prediction),
+                        'confidence': float(probability) if probability is not None else 0.5,
+                        'dataset': str(self.dataset.upper())
+                    }
+                    results.append(result)
+                    print(f"📷 {result['image']}: {result['prediction']} (Confidence: {result['confidence']:.3f})")
         
         return results
 
-def main():
-    """Main prediction function"""
-    parser = argparse.ArgumentParser(description='Image Forgery Detection Prediction - Multi-Dataset Support')
-    parser.add_argument('input', nargs='?', help='Image file or directory path')
-    parser.add_argument('--dataset', '-d', choices=['4cam', 'misd', 'imsplice','micc-f220'], 
-                       help='Dataset to use (4cam, misd, or imsplice). If not specified, uses current active dataset')
-    parser.add_argument('--output', '-o', help='Output JSON file for batch results')
-    parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
-    parser.add_argument('--list-datasets', action='store_true', help='List available datasets and exit')
-    
-    args = parser.parse_args()
-    
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    
-    # Handle list datasets option
-    if args.list_datasets:
-        print("=" * 60)
-        print("📊 AVAILABLE DATASETS")
-        print("=" * 60)
-        for key, dataset_info in DATASETS.items():
-            status = "✅ Available" if (os.path.exists(dataset_info["authentic_dir"]) and 
-                                     os.path.exists(dataset_info["forged_dir"])) else "❌ Not Found"
-            model_path = os.path.join(MODELS_DIR, f"{key}_best_model.pkl")
-            model_status = "✅ Model Available" if os.path.exists(model_path) else "❌ Model Missing"
-            
-            print(f"\n{key.upper()} Dataset:")
-            print(f"  Name: {dataset_info['name']}")
-            print(f"  Description: {dataset_info['description']}")
-            print(f"  Data Status: {status}")
-            print(f"  Model Status: {model_status}")
-        
-        current_dataset = ACTIVE_DATASET
-        print(f"\n🎯 Current Active Dataset: {current_dataset.upper()}")
-        print("=" * 60)
-        return
-    
-    # Check if input is provided when not listing datasets
-    if not args.input:
-        parser.error("Input path is required unless using --list-datasets")
-    
-    print("=" * 60)
-    print("🚀 OPTIMIZED IMAGE FORGERY DETECTION")
-    print("=" * 60)
-    
-    # Determine which dataset to use
-    dataset_to_use = args.dataset if args.dataset else None
-    
-    # Initialize predictor
-    predictor = OptimizedPredictor(dataset=dataset_to_use)
-    
-    # Load models
+
+def generate_test_predictions_csv(dataset):
+    """Generate a CSV of predictions for a given dataset"""
+    import csv
+    input_csv = input("Enter the csv file: ")
+    output_csv = f'./results/test_predictions.csv'
+    os.makedirs(f'./results', exist_ok=True)
+    predictor = OptimizedPredictor(dataset=dataset)
     if not predictor.load_models():
-        print(f"❌ Failed to load models for {predictor.dataset.upper()} dataset.")
-        print("💡 Available options:")
-        print("  1. Train the model first using: python train.py")
-        print("  2. Switch dataset using: python dataset_manager.py --switch <dataset>")
-        print("  3. List available datasets: python predict_optimized.py --list-datasets")
+        print(f"❌ Failed to load models for {dataset}")
         return
-    
-    input_path = Path(args.input)
-    
-    if input_path.is_file():
-        # Single image prediction
-        logger.info(f"📷 Analyzing image: {input_path}")
-        
-        prediction, probability = predictor.predict(str(input_path))
-        
-        if prediction is not None:
-            result = 'Forged' if prediction == 1 else 'Authentic'
-            confidence = probability if probability is not None else 0.5
-            
-            print(f"\n🎯 RESULT:")
-            print(f"� Dataset: {predictor.dataset.upper()}")
-            print(f"�📷 Image: {input_path.name}")
-            print(f"🔍 Prediction: {result}")
-            print(f"📊 Confidence: {confidence:.3f}")
-            
-            if confidence > 0.8:
-                print("✅ High confidence")
-            elif confidence > 0.6:
-                print("⚠️ Medium confidence")
+    with open(input_csv, 'r', newline='') as infile, open(output_csv, 'w', newline='') as outfile:
+        reader = csv.DictReader(infile)
+        fieldnames = ['filepath', 'actual_label', 'predicted_label']
+        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in reader:
+            filepath = row['filepath']
+            actual_label = 'Authentic' if row['label'] == '0' else 'Forged'
+            pred, _ = predictor.predict(filepath)
+            predicted_label = 'Authentic' if pred == 0 else 'Forged'
+            writer.writerow({'filepath': filepath, 'actual_label': actual_label, 'predicted_label': predicted_label})
+    print(f"✅ Test predictions CSV saved to {output_csv}")
+
+def create_filename_blind_test(dataset):
+    """Create a test where filenames don't reveal the class"""
+    import pandas as pd
+    from pathlib import Path
+    import shutil
+    import os
+    print("="*80)
+    print("FILENAME-BLIND TEST")
+    print("="*80)
+    csv_path = f"./data/{dataset}_labels.csv"
+    df = pd.read_csv(csv_path)
+    test_dir = Path("./temp_blind_test")
+    test_dir.mkdir(exist_ok=True)
+    authentic_samples = df[df['label'] == 0].sample(n=5)
+    forged_samples = df[df['label'] == 1].sample(n=5)
+    test_cases = []
+    print("Creating test files with neutral names...")
+    for i, (_, row) in enumerate(authentic_samples.iterrows()):
+        if os.path.exists(row['filepath']):
+            original_ext = Path(row['filepath']).suffix
+            new_name = f"image_{i+1:03d}{original_ext}"
+            new_path = test_dir / new_name
+            shutil.copy2(row['filepath'], new_path)
+            test_cases.append({
+                'new_name': new_name,
+                'new_path': str(new_path),
+                'original_name': row['filename'],
+                'true_label': 0,
+                'true_class': 'Authentic'
+            })
+            print(f"  {row['filename']} -> {new_name} (Authentic)")
+    for i, (_, row) in enumerate(forged_samples.iterrows()):
+        if os.path.exists(row['filepath']):
+            original_ext = Path(row['filepath']).suffix
+            new_name = f"image_{i+6:03d}{original_ext}"
+            new_path = test_dir / new_name
+            shutil.copy2(row['filepath'], new_path)
+            test_cases.append({
+                'new_name': new_name,
+                'new_path': str(new_path),
+                'original_name': row['filename'],
+                'true_label': 1,
+                'true_class': 'Forged'
+            })
+            print(f"  {row['filename']} -> {new_name} (Forged)")
+    return test_cases, test_dir
+
+def run_blind_predictions(test_cases, dataset):
+    """Run predictions on renamed files"""
+    print(f"\n{'='*80}")
+    print("RUNNING BLIND PREDICTIONS")
+    print("="*80)
+    predictor = OptimizedPredictor(dataset)
+    if not predictor.load_models():
+        print("❌ Failed to load models")
+        return 0.0
+    print("\nPredicting on renamed files (no filename cues):")
+    print("-" * 80)
+    correct_predictions = 0
+    total_predictions = 0
+    for case in test_cases:
+        try:
+            prediction, probability = predictor.predict(case['new_path'])
+            if prediction is not None:
+                predicted_class = 'Forged' if prediction == 1 else 'Authentic'
+                is_correct = prediction == case['true_label']
+                if is_correct:
+                    correct_predictions += 1
+                total_predictions += 1
+                status_icon = "✅" if is_correct else "❌"
+                confidence = probability if probability is not None else 0.5
+                print(f"{status_icon} {case['new_name']:<15} | True: {case['true_class']:<9} | "
+                      f"Pred: {predicted_class:<9} | Conf: {confidence:.3f}")
+                print(f"   Original: {case['original_name']}")
+                print()
             else:
-                print("❓ Low confidence")
-                
-            # Additional interpretation
-            if result == 'Forged':
-                print("🔴 The image appears to be FORGED/MANIPULATED")
-            else:
-                print("🟢 The image appears to be AUTHENTIC/ORIGINAL")
+                print(f"❌ Failed to predict {case['new_name']}")
+        except Exception as e:
+            print(f"❌ Error predicting {case['new_name']}: {e}")
+    if total_predictions > 0:
+        accuracy = correct_predictions / total_predictions
+        print("="*80)
+        print(f"BLIND TEST RESULTS:")
+        print(f"Correct predictions: {correct_predictions}/{total_predictions}")
+        print(f"Accuracy: {accuracy:.3f} ({accuracy*100:.1f}%)")
+        print("="*80)
+        if accuracy >= 0.8:
+            print("✅ EXCELLENT: Model is truly analyzing image content!")
+        elif accuracy >= 0.6:
+            print("⚠️ MODERATE: Model shows some real learning but may have issues")
         else:
-            print("❌ Failed to process image")
-    
-    elif input_path.is_dir():
-        # Batch prediction
-        logger.info(f"📂 Analyzing directory: {input_path}")
-        
-        results = predictor.predict_batch(str(input_path))
-        
-        if results:
-            # Summary statistics
-            total = len(results)
-            forged = sum(1 for r in results if r['label'] == 1)
-            authentic = total - forged
-            avg_confidence = sum(r['confidence'] for r in results) / total
-            
-            print(f"\n📊 BATCH RESULTS:")
-            print(f"� Dataset: {predictor.dataset.upper()}")
-            print(f"�📷 Total Images: {total}")
-            print(f"🔴 Forged: {forged} ({forged/total*100:.1f}%)")
-            print(f"🟢 Authentic: {authentic} ({authentic/total*100:.1f}%)")
-            print(f"📊 Average Confidence: {avg_confidence:.3f}")
-            
-            # Save results if output specified
-            if args.output:
-                import json
-                batch_summary = {
-                    'dataset': predictor.dataset.upper(),
-                    'summary': {
-                        'total_images': total,
-                        'forged_count': forged,
-                        'authentic_count': authentic,
-                        'forged_percentage': forged/total*100,
-                        'average_confidence': avg_confidence
-                    },
-                    'predictions': results
-                }
-                with open(args.output, 'w') as f:
-                    json.dump(batch_summary, f, indent=2)
-                print(f"💾 Results saved to {args.output}")
-        else:
-            print("❌ No images processed successfully")
-    
+            print("❌ POOR: Model appears to rely heavily on filename patterns!")
+        return accuracy
     else:
-        print(f"❌ Invalid input path: {input_path}")
+        print("❌ No successful predictions made")
+        return 0.0
+
+def cleanup_test_files(test_dir):
+    """Clean up temporary test files"""
+    import shutil
+    try:
+        shutil.rmtree(test_dir)
+        print(f"\n🧹 Cleaned up test directory: {test_dir}")
+    except Exception as e:
+        print(f"⚠️ Could not clean up {test_dir}: {e}")
+
+def run_blind_test(dataset):
+    """Main function to run the filename-blind test"""
+    print("🔍 TESTING IF MODEL USES IMAGE CONTENT OR FILENAME PATTERNS")
+    print("This test copies images with neutral names to remove filename cues.")
+    print()
+    try:
+        test_cases, test_dir = create_filename_blind_test(dataset)
+        if not test_cases:
+            print("❌ No test cases created")
+            return
+        accuracy = run_blind_predictions(test_cases, dataset)
+        if accuracy is None:
+            accuracy = 0.0
+        print("\n" + "="*80)
+        print("FINAL CONCLUSION")
+        print("="*80)
+        if accuracy >= 0.8:
+            print("🎉 CONCLUSION: Your model is LEGITIMATELY LEARNING!")
+        elif accuracy >= 0.6:
+            print("🤔 CONCLUSION: Model shows MIXED BEHAVIOR")
+        else:
+            print("🚨 CONCLUSION: Model is primarily using FILENAME PATTERNS!")
+    finally:
+        if 'test_dir' in locals():
+            cleanup_test_files(test_dir)
+
+
+def option_palette():
+    """Interactive option palette for user selection"""
+    print("\n=== Image Forgery Detection ===")
+    print("Select an option:")
+    print("1. Predict a single image or folder")
+    print("2. Generate test predictions CSV")
+    print("3. Run filename-blind test")
+    choice = input("Enter choice [1-3]: ").strip()
+    return choice
+
+dataset = ACTIVE_DATASET
+
+def main():
+    choice = option_palette()
+    if choice == '1':
+        path = input("Enter image file or folder path: ").strip()
+        if not path:
+            print("No path provided.")
+        predictor = OptimizedPredictor(dataset=dataset)
+        if not predictor.load_models():
+            print(f"Failed to load models for {dataset}.")
+        from pathlib import Path
+        input_path = Path(path)
+        if input_path.is_file():
+            prediction, probability = predictor.predict(str(input_path))
+            if prediction is not None:
+                result = 'Forged' if prediction == 1 else 'Authentic'
+                confidence = probability if probability is not None else 0.5
+                print(f"\nResult: {result} (Confidence: {confidence:.3f})")
+            else:
+                print("Failed to process image.")
+        elif input_path.is_dir():
+            results = predictor.predict_batch(str(input_path))
+            if results:
+                total = len(results)
+                forged = sum(1 for r in results if r['label'] == 1)
+                authentic = total - forged
+                avg_confidence = sum(r['confidence'] for r in results) / total
+                print(f"\nBatch Results: {total} images")
+                print(f"Forged: {forged} ({forged/total*100:.1f}%)")
+                print(f"Authentic: {authentic} ({authentic/total*100:.1f}%)")
+                print(f"Average Confidence: {avg_confidence:.3f}")
+            else:
+                print("No images processed successfully.")
+        else:
+            print("Invalid path.")
+    elif choice == '2':
+        generate_test_predictions_csv(dataset)
+    elif choice == '3':
+        run_blind_test(dataset)
+    else:
+        print("Invalid choice. Please select a valid option.")
 
 if __name__ == "__main__":
     main()

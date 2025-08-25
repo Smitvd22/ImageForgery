@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Dataset Switching Utility
 Easily switch between different datasets and manage their training/testing

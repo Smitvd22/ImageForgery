@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Ultra-Enhanced XGBoost Classifier with Advanced Ensemble Methods
 Implementing XGBoost and ensemble techniques

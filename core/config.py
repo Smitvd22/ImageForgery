@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Enhanced Configuration for Maximum Accuracy
 Implementing state-of-the-art ImageNet models and advanced techniques

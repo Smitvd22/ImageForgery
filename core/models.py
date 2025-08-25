@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Ultra-Enhanced Models with State-of-the-Art ImageNet Architectures
 Implementing multiple SOTA models for maximum accuracy

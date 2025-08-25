@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
  Image Forgery Detection Validation Script
 Proper validation on validation set to monitor overfitting

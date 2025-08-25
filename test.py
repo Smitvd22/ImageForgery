@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
  Image Forgery Detection Testing on Complete Dataset
 GPU-accelerated testing with comprehensive evaluation and visualization
@@ -349,7 +348,10 @@ class CompleteForgeryTester:
             # Calculate comprehensive metrics
             metrics = self.calculate_comprehensive_metrics(labels, predictions, probabilities)
             metrics['prediction_time'] = prediction_time
-            metrics['predictions_per_second'] = len(labels) / prediction_time
+            if prediction_time > 0:
+                metrics['predictions_per_second'] = len(labels) / prediction_time
+            else:
+                metrics['predictions_per_second'] = 0.0
             
             results[name] = metrics
             

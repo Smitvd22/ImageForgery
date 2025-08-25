@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Cross-Validation Utilities for Image Forgery Detection
 Handles XGBoost and LightGBM cross-validation issues

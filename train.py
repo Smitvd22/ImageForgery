@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Enhanced Image Forgery Detection Training with Epoch-Based Learning
 GPU-accelerated training with comprehensive evaluation, cross-validation, and anti-overfitting measures
@@ -73,7 +72,7 @@ logger = logging.getLogger(__name__)
 # Import configuration
 from core.config import *
 from core.models import TIMM_AVAILABLE
-from core.enhanced_trainer import EpochBasedTrainer
+from core.trainer import EpochBasedTrainer
 from core.cv_utils import robust_cross_validate, get_conservative_xgb_params, get_conservative_lgb_params
 from core.preprocessing import (
     adaptive_histogram_equalization, 
